@@ -1,0 +1,248 @@
+erDiagram
+
+    ADMIN_USER ||--o{ FORM_VERSION : creates
+    ADMIN_USER ||--o{ PAYMENT : verifies
+    ADMIN_USER ||--o{ AUDIT_LOG : creates
+    ADMIN_USER ||--o{ SITE_SETTING : updates
+    ADMIN_USER ||--o{ NOTIFICATION : receives
+
+    DEPARTMENT ||--o{ MEMBER : contains
+    DEPARTMENT ||--o{ RECRUITMENT_APPLICATION : receives
+
+    MEMBER }o--o| MEDIA : uses_photo
+
+    EVENT ||--|| EVENT_CONTENT : has
+    EVENT ||--o{ FORM_VERSION : has
+    EVENT ||--o{ REGISTRATION : receives
+    EVENT ||--o{ EVENT_PARTICIPANT : tracks
+    EVENT ||--o{ MEDIA : contains
+
+    FORM_VERSION ||--o{ EVENT_FIELD : contains
+    FORM_VERSION ||--o{ REGISTRATION : used_by
+
+    REGISTRATION ||--o{ REGISTRATION_RESPONSE : contains
+    REGISTRATION ||--o| TEAM : may_have
+    REGISTRATION ||--o| PAYMENT : may_have
+    REGISTRATION ||--o{ EVENT_PARTICIPANT : has
+
+    TEAM ||--o{ TEAM_MEMBER : contains
+
+    EVENT {
+        string id PK
+        string slug UK
+        string name
+        string status
+        datetime starts_at
+        datetime ends_at
+        string venue
+        int capacity
+        string capacity_mode
+        string registration_mode
+        boolean eligibility_crescent
+        boolean eligibility_external
+        datetime registration_opens_at
+        datetime registration_closes_at
+        string active_form_version_id FK
+        string external_registration_url
+        string payment_mode
+        string payment_method
+        decimal fee_amount
+        string upi_id
+        string payee_name
+        datetime created_at
+        datetime updated_at
+    }
+
+    EVENT_CONTENT {
+        string id PK
+        string event_id FK
+        text description_rich
+        text rules_rich
+        text instructions_rich
+        text eligibility_rich
+        text notes_rich
+        datetime updated_at
+    }
+
+    FORM_VERSION {
+        string id PK
+        string event_id FK
+        int version_number
+        string status
+        datetime published_at
+        string created_by FK
+        datetime created_at
+    }
+
+    EVENT_FIELD {
+        string id PK
+        string form_version_id FK
+        string key
+        string label
+        string type
+        string field_scope
+        boolean required
+        text config
+        text validation
+        text conditional_logic
+        int display_order
+    }
+
+    REGISTRATION {
+        string id PK
+        string event_id FK
+        string form_version_id FK
+        string registration_mode
+        string participant_type
+        string participant_name
+        string college_normalized
+        string identifier_normalized
+        string status
+        string registration_code UK
+        datetime created_at
+        datetime updated_at
+    }
+
+    REGISTRATION_RESPONSE {
+        string id PK
+        string registration_id FK
+        string event_field_id FK
+        text value_text
+        text value_json
+    }
+
+    TEAM {
+        string id PK
+        string registration_id FK
+        string name
+        datetime created_at
+    }
+
+    TEAM_MEMBER {
+        string id PK
+        string team_id FK
+        string participant_type
+        string name
+        string college_normalized
+        string identifier_normalized
+        string phone
+        string academic_department
+        string year
+        string position
+        boolean is_leader
+    }
+
+    EVENT_PARTICIPANT {
+        string id PK
+        string event_id FK
+        string registration_id FK
+        string participant_type
+        string college_normalized
+        string identifier_normalized
+        datetime created_at
+    }
+
+    PAYMENT {
+        string id PK
+        string registration_id FK
+        string method
+        string status
+        decimal amount
+        string currency
+        string upi_id
+        string payee_name
+        string payment_uri
+        string user_reference
+        string verified_by FK
+        datetime verified_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    DEPARTMENT {
+        string id PK
+        string slug UK
+        string name UK
+        text description
+        boolean active
+        datetime created_at
+        datetime updated_at
+    }
+
+    MEMBER {
+        string id PK
+        string name
+        string position
+        string department_id FK
+        string photo_media_id FK
+        text bio
+        string social_url
+        boolean visibility
+        int display_order
+        datetime created_at
+        datetime updated_at
+    }
+
+    RECRUITMENT_APPLICATION {
+        string id PK
+        string rrn_normalized
+        string name
+        string department_id FK
+        string academic_department
+        string year
+        string phone
+        string status
+        datetime created_at
+        datetime updated_at
+    }
+
+    MEDIA {
+        string id PK
+        string event_id FK
+        string object_key
+        string mime_type
+        string alt_text
+        int width
+        int height
+        string visibility
+        int display_order
+        datetime created_at
+    }
+
+    ADMIN_USER {
+        string id PK
+        string email UK
+        string name
+        string role
+        boolean active
+        datetime created_at
+        datetime updated_at
+    }
+
+    NOTIFICATION {
+        string id PK
+        string target_admin_id FK
+        string type
+        string title
+        text body
+        string severity
+        datetime read_at
+        datetime created_at
+    }
+
+    AUDIT_LOG {
+        string id PK
+        string actor_id FK
+        string action
+        string entity_type
+        string entity_id
+        text metadata
+        datetime created_at
+    }
+
+    SITE_SETTING {
+        string key PK
+        text value
+        string updated_by FK
+        datetime updated_at
+    }
