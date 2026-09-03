@@ -1,0 +1,583 @@
+// =============================================================================
+// CCF — Prisma Schema
+// Database: PostgreSQL
+// ORM: Prisma
+// Primary keys: UUID
+// Timestamps: TIMESTAMPTZ (UTC storage, IST display in application)
+// Monetary: Decimal (NUMERIC 10,2)
+// JSON: Json (JSONB)
+// Naming: PascalCase Prisma models ↔ snake_case PostgreSQL via @map / @@map
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum AdminRole {
+  CCF_ADMIN
+  IT_ADMIN
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+/// How registration is conducted for this event.
+/// INTERNAL = CCF built-in form  |  EXTERNAL = Google Form / external URL  |  NONE = no registration
+enum RegistrationMode {
+  INTERNAL
+  EXTERNAL
+  NONE
+}
+
+/// Which registration mechanism is used.
+enum RegistrationMethod {
+  BUILT_IN
+  GOOGLE_FORM
+  NONE
+}
+
+/// How event capacity is measured.
+enum EventCapacityMode {
+  PARTICIPANTS
+  TEAMS
+  UNLIMITED
+}
+
+enum ParticipantType {
+  CRESCENT
+  EXTERNAL
+}
+
+enum RegistrationType {
+  INDIVIDUAL
+  TEAM
+}
+
+/// Canonical frozen values. Do NOT add PENDING or CONFIRMED.
+enum RegistrationStatus {
+  ACTIVE
+  CANCELLED
+}
+
+enum FormVersionStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  EMAIL
+  PHONE
+  DATE
+  TIME
+  DATETIME
+  SELECT
+  MULTI_SELECT
+  RADIO
+  CHECKBOX
+  FILE
+}
+
+enum FieldScope {
+  REGISTRATION
+  PARTICIPANT
+  TEAM
+  TEAM_MEMBER
+}
+
+enum PaymentMode {
+  FREE
+  PAID
+}
+
+enum PaymentMethod {
+  MANUAL_UPI
+  PROVIDER
+}
+
+/// Canonical frozen values. Do NOT add NOT_REQUIRED, PAID, or FAILED.
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+  REFUNDED
+}
+
+enum RecruitmentStatus {
+  ACTIVE
+  WITHDRAWN
+  SELECTED
+  REJECTED
+}
+
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+// =============================================================================
+// MODELS
+// =============================================================================
+
+// --- 1. admin_users -----------------------------------------------------------
+
+model AdminUser {
+  id        String    @id @default(uuid()) @db.Uuid
+  email     String    @unique @db.VarChar(320)
+  name      String    @db.VarChar(150)
+  role      AdminRole
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations (back-references)
+  formVersions  FormVersion[]  @relation("FormVersionCreatedBy")
+  payments      Payment[]      @relation("PaymentVerifiedBy")
+  notifications Notification[] @relation("NotificationTarget")
+  auditLogs     AuditLog[]     @relation("AuditLogActor")
+  siteSettings  SiteSetting[]  @relation("SiteSettingUpdatedBy")
+
+  @@map("admin_users")
+}
+
+// --- 2. departments -----------------------------------------------------------
+
+model Department {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique @db.VarChar(100)
+  name        String   @unique @db.VarChar(150)
+  description String?  @db.Text
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relations
+  members                 Member[]
+  recruitmentApplications RecruitmentApplication[]
+
+  @@map("departments")
+}
+
+// --- 3. members ---------------------------------------------------------------
+// NOTE: members.photo_media_id → media.id creates a cross-reference between
+// members and media. Both tables have nullable FK to the other (members → media,
+// media is independent). No circular dependency — media is authoritative.
+
+model Member {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(150)
+  position     String?  @db.VarChar(150)
+  departmentId String   @map("department_id") @db.Uuid
+  photoMediaId String?  @map("photo_media_id") @db.Uuid
+  bio          String?  @db.Text
+  socialUrl    String?  @map("social_url") @db.Text
+  visibility   Boolean  @default(true)
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  photo      Media?     @relation("MemberPhoto", fields: [photoMediaId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([departmentId])
+  @@map("members")
+}
+
+// --- 4. events ----------------------------------------------------------------
+// NOTE: Circular FK between events.active_form_version_id ↔ form_versions.event_id.
+// Prisma requires one side to use a named relation disambiguator.
+// active_form_version_id is nullable — created NULL, set later once a form version exists.
+// The initial migration SQL must handle the circular FK ordering carefully
+// (see prisma/migrations/README.md).
+
+model Event {
+  id   String @id @default(uuid()) @db.Uuid
+  slug String @unique @db.VarChar(150)
+  name String @db.VarChar(200)
+
+  status EventStatus @default(DRAFT)
+
+  startsAt DateTime? @map("starts_at") @db.Timestamptz()
+  endsAt   DateTime? @map("ends_at") @db.Timestamptz()
+  venue    String?   @db.VarChar(300)
+
+  capacity     Int?
+  capacityMode EventCapacityMode @default(UNLIMITED) @map("capacity_mode")
+
+  registrationMethod RegistrationMethod @default(NONE) @map("registration_method")
+  registrationMode   RegistrationMode   @default(NONE) @map("registration_mode")
+
+  eligibilityCrescent Boolean @default(false) @map("eligibility_crescent")
+  eligibilityExternal Boolean @default(false) @map("eligibility_external")
+
+  registrationOpensAt  DateTime? @map("registration_opens_at") @db.Timestamptz()
+  registrationClosesAt DateTime? @map("registration_closes_at") @db.Timestamptz()
+
+  // Circular FK: resolved via named relation "EventActiveFormVersion"
+  // NULL on creation; set to a published FormVersion once one exists.
+  activeFormVersionId String? @map("active_form_version_id") @db.Uuid
+
+  paymentMode   PaymentMode    @default(FREE) @map("payment_mode")
+  paymentMethod PaymentMethod? @map("payment_method")
+  feeAmount     Decimal?       @map("fee_amount") @db.Decimal(10, 2)
+  upiId         String?        @map("upi_id") @db.VarChar(255)
+  payeeName     String?        @map("payee_name") @db.VarChar(200)
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Named relation for the circular FK side
+  activeFormVersion FormVersion? @relation("EventActiveFormVersion", fields: [activeFormVersionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  // Back-relations
+  formVersions      FormVersion[]      @relation("FormVersionEvent")
+  content           EventContent?
+  registrations     Registration[]
+  eventParticipants EventParticipant[]
+  media             Media[]            @relation("EventMedia")
+
+  @@index([status])
+  @@index([registrationOpensAt], map: "idx_events_reg_opens_at")
+  @@index([registrationClosesAt], map: "idx_events_reg_closes_at")
+  @@map("events")
+}
+
+// --- 5. event_content ---------------------------------------------------------
+// One-to-one with Event. Cascade delete: content has no independent meaning.
+
+model EventContent {
+  id               String   @id @default(uuid()) @db.Uuid
+  eventId          String   @unique @map("event_id") @db.Uuid
+  descriptionRich  String?  @map("description_rich") @db.Text
+  rulesRich        String?  @map("rules_rich") @db.Text
+  instructionsRich String?  @map("instructions_rich") @db.Text
+  eligibilityRich  String?  @map("eligibility_rich") @db.Text
+  notesRich        String?  @map("notes_rich") @db.Text
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("event_content")
+}
+
+// --- 6. form_versions ---------------------------------------------------------
+// Circular FK: event_id → events.id (standard direction).
+// events.active_form_version_id → form_versions.id (reverse, named).
+
+model FormVersion {
+  id            String            @id @default(uuid()) @db.Uuid
+  eventId       String            @map("event_id") @db.Uuid
+  versionNumber Int               @map("version_number")
+  status        FormVersionStatus @default(DRAFT)
+  publishedAt   DateTime?         @map("published_at") @db.Timestamptz()
+  createdBy     String            @map("created_by") @db.Uuid
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+
+  event          Event     @relation("FormVersionEvent", fields: [eventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  createdByAdmin AdminUser @relation("FormVersionCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Back-reference: events that currently use this version as active
+  eventAsActive Event[] @relation("EventActiveFormVersion")
+
+  // Children
+  eventFields   EventField[]
+  registrations Registration[]
+
+  @@unique([eventId, versionNumber])
+  @@index([eventId])
+  @@map("form_versions")
+}
+
+// --- 7. event_fields ----------------------------------------------------------
+
+model EventField {
+  id               String     @id @default(uuid()) @db.Uuid
+  formVersionId    String     @map("form_version_id") @db.Uuid
+  key              String     @db.VarChar(100)
+  label            String     @db.VarChar(250)
+  type             FieldType
+  fieldScope       FieldScope @map("field_scope")
+  required         Boolean    @default(false)
+  config           Json?      @db.JsonB
+  validation       Json?      @db.JsonB
+  conditionalLogic Json?      @map("conditional_logic") @db.JsonB
+  displayOrder     Int        @map("display_order")
+
+  formVersion           FormVersion            @relation(fields: [formVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  registrationResponses RegistrationResponse[]
+
+  @@unique([formVersionId, key])
+  @@index([formVersionId])
+  @@map("event_fields")
+}
+
+// --- 8. registrations ---------------------------------------------------------
+// Single shared registration table for all events.
+// registration_type (RegistrationType) = INDIVIDUAL | TEAM.
+// participant_type  (ParticipantType)  = CRESCENT | EXTERNAL.
+// college_normalized and identifier_normalized are nullable — populated
+// for EXTERNAL participants (college + roll number) and CRESCENT participants
+// (normalized RRN stored in identifier_normalized, college_normalized = null).
+
+model Registration {
+  id                   String             @id @default(uuid()) @db.Uuid
+  eventId              String             @map("event_id") @db.Uuid
+  formVersionId        String             @map("form_version_id") @db.Uuid
+  registrationType     RegistrationType   @map("registration_type")
+  participantType      ParticipantType    @map("participant_type")
+  participantName      String             @map("participant_name") @db.VarChar(200)
+  collegeNormalized    String?            @map("college_normalized") @db.VarChar(250)
+  identifierNormalized String?            @map("identifier_normalized") @db.VarChar(100)
+  status               RegistrationStatus @default(ACTIVE)
+  registrationCode     String             @unique @map("registration_code") @db.VarChar(50)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz()
+
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  formVersion FormVersion @relation(fields: [formVersionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  // Owned child records — cascade delete releases capacity and identity locks
+  responses         RegistrationResponse[]
+  team              Team?
+  payment           Payment?
+  eventParticipants EventParticipant[]
+
+  @@index([eventId, createdAt], map: "idx_registrations_event_created")
+  @@index([formVersionId], map: "idx_registrations_form_version")
+  @@index([status], map: "idx_registrations_status")
+  @@map("registrations")
+}
+
+// --- 9. registration_responses ------------------------------------------------
+
+model RegistrationResponse {
+  id             String  @id @default(uuid()) @db.Uuid
+  registrationId String  @map("registration_id") @db.Uuid
+  eventFieldId   String  @map("event_field_id") @db.Uuid
+  valueText      String? @map("value_text") @db.Text
+  valueJson      Json?   @map("value_json") @db.JsonB
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  eventField   EventField   @relation(fields: [eventFieldId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([registrationId, eventFieldId])
+  @@index([registrationId], map: "idx_reg_responses_reg_id")
+  @@map("registration_responses")
+}
+
+// --- 10. teams ----------------------------------------------------------------
+// One-to-one with Registration. Cascade: team deleted when registration deleted.
+
+model Team {
+  id             String   @id @default(uuid()) @db.Uuid
+  registrationId String   @unique @map("registration_id") @db.Uuid
+  name           String?  @db.VarChar(200)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  members      TeamMember[]
+
+  @@index([registrationId], map: "idx_teams_registration_id")
+  @@map("teams")
+}
+
+// --- 11. team_members ---------------------------------------------------------
+
+model TeamMember {
+  id                   String          @id @default(uuid()) @db.Uuid
+  teamId               String          @map("team_id") @db.Uuid
+  participantType      ParticipantType @map("participant_type")
+  name                 String          @db.VarChar(200)
+  collegeNormalized    String?         @map("college_normalized") @db.VarChar(250)
+  identifierNormalized String?         @map("identifier_normalized") @db.VarChar(100)
+  phone                String?         @db.VarChar(30)
+  academicDepartment   String?         @map("academic_department") @db.VarChar(150)
+  year                 String?         @db.VarChar(50)
+  position             String?         @db.VarChar(100)
+  isLeader             Boolean         @map("is_leader")
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([teamId], map: "idx_team_members_team_id")
+  @@map("team_members")
+}
+
+// --- 12. event_participants ---------------------------------------------------
+// Active participant identity registry. Enforces uniqueness per event.
+// Crescent: UNIQUE (event_id, identifier_normalized) WHERE participant_type = CRESCENT
+// External: UNIQUE (event_id, college_normalized, identifier_normalized) WHERE participant_type = EXTERNAL
+//
+// These partial unique indexes CANNOT be expressed as Prisma @@unique (Prisma does
+// not support partial/conditional unique indexes in schema DSL). They are defined
+// as raw SQL in the migration file. See prisma/migrations/README.md.
+//
+// Cascade delete from registration releases the identity lock.
+
+model EventParticipant {
+  id                   String          @id @default(uuid()) @db.Uuid
+  eventId              String          @map("event_id") @db.Uuid
+  registrationId       String          @map("registration_id") @db.Uuid
+  participantType      ParticipantType @map("participant_type")
+  collegeNormalized    String?         @map("college_normalized") @db.VarChar(250)
+  identifierNormalized String          @map("identifier_normalized") @db.VarChar(100)
+  createdAt            DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+
+  event        Event        @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  registration Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([eventId], map: "idx_event_participants_event_id")
+  @@index([registrationId], map: "idx_event_participants_reg_id")
+  // Partial unique indexes added via raw SQL in migration — see prisma/migrations/README.md
+  @@map("event_participants")
+}
+
+// --- 13. payments -------------------------------------------------------------
+// One-to-one with Registration. Cascade delete when registration deleted.
+// CHECK amount > 0 and currency = 'INR' enforced in application and migration SQL.
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  registrationId String        @unique @map("registration_id") @db.Uuid
+  method         PaymentMethod
+  status         PaymentStatus @default(PENDING)
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("INR") @db.Char(3)
+  upiId          String?       @map("upi_id") @db.VarChar(255)
+  payeeName      String?       @map("payee_name") @db.VarChar(200)
+  paymentUri     String?       @map("payment_uri") @db.Text
+  userReference  String?       @map("user_reference") @db.VarChar(200)
+  verifiedBy     String?       @map("verified_by") @db.Uuid
+  verifiedAt     DateTime?     @map("verified_at") @db.Timestamptz()
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  registration    Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  verifiedByAdmin AdminUser?   @relation("PaymentVerifiedBy", fields: [verifiedBy], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([status], map: "idx_payments_status")
+  @@map("payments")
+}
+
+// --- 14. recruitment_applications --------------------------------------------
+// Partial unique index on rrn_normalized WHERE status = 'ACTIVE' enforced via
+// raw SQL in migration (cannot be expressed in Prisma DSL). See migrations/README.md.
+
+model RecruitmentApplication {
+  id                 String            @id @default(uuid()) @db.Uuid
+  rrnNormalized      String            @map("rrn_normalized") @db.VarChar(50)
+  name               String            @db.VarChar(200)
+  departmentId       String            @map("department_id") @db.Uuid
+  academicDepartment String            @map("academic_department") @db.VarChar(150)
+  year               String            @db.VarChar(50)
+  phone              String            @db.VarChar(30)
+  status             RecruitmentStatus @default(ACTIVE)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([status], map: "idx_recruitment_apps_status")
+  // Partial unique: UNIQUE (rrn_normalized) WHERE status = 'ACTIVE' — see migrations/README.md
+  @@map("recruitment_applications")
+}
+
+// --- 15. media ---------------------------------------------------------------
+// event_id is nullable: NULL = general/member/site asset, NOT NULL = event media.
+// ON DELETE SET NULL for event_id: media is preserved when event is archived.
+// Members reference media via photo_media_id — explicit relation name required
+// to disambiguate from EventMedia relation.
+
+model Media {
+  id           String   @id @default(uuid()) @db.Uuid
+  eventId      String?  @map("event_id") @db.Uuid
+  objectKey    String   @map("object_key") @db.Text
+  mimeType     String   @map("mime_type") @db.VarChar(100)
+  altText      String?  @map("alt_text") @db.VarChar(300)
+  width        Int?
+  height       Int?
+  visibility   Boolean  @default(true)
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  event   Event?   @relation("EventMedia", fields: [eventId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  members Member[] @relation("MemberPhoto")
+
+  @@index([eventId], map: "idx_media_event_id")
+  @@map("media")
+}
+
+// --- 16. notifications -------------------------------------------------------
+// target_admin_id = NULL → global notification (shown to all admins)
+// target_admin_id = non-null → admin-specific notification
+// read_at = NULL → unread
+
+model Notification {
+  id            String               @id @default(uuid()) @db.Uuid
+  targetAdminId String?              @map("target_admin_id") @db.Uuid
+  type          String               @db.VarChar(100)
+  title         String               @db.VarChar(250)
+  body          String               @db.Text
+  severity      NotificationSeverity
+  readAt        DateTime?            @map("read_at") @db.Timestamptz()
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz()
+
+  targetAdmin AdminUser? @relation("NotificationTarget", fields: [targetAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([targetAdminId, readAt], map: "idx_notifications_admin_read")
+  @@map("notifications")
+}
+
+// --- 17. audit_logs ----------------------------------------------------------
+// actor_id = NULL when system-generated or actor admin has been removed.
+// metadata MUST NOT contain RRN, phone numbers, raw responses, payment secrets.
+// entity_id is nullable (some actions are not entity-specific).
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String?  @map("entity_id") @db.Uuid
+  metadata   Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  actor AdminUser? @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  @@index([entityType, entityId], map: "idx_audit_logs_entity")
+  @@index([actorId], map: "idx_audit_logs_actor")
+  @@map("audit_logs")
+}
+
+// --- 18. site_settings -------------------------------------------------------
+// Primary key is the key string (not UUID).
+// Stores public configuration only — no secrets.
+
+model SiteSetting {
+  key       String   @id @db.VarChar(150)
+  value     Json     @db.JsonB
+  updatedBy String   @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  updatedByAdmin AdminUser @relation("SiteSettingUpdatedBy", fields: [updatedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@map("site_settings")
+}
