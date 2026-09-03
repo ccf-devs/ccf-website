@@ -1,73 +1,408 @@
 @import "tailwindcss";
 
 /*
-  shadcn/ui CSS variable baseline.
-  Color tokens and design system will be configured in the Design System phase.
-  Only the required variable structure is established here.
+  =============================================================================
+  CCF DESIGN TOKENS & VISUAL SYSTEM
+  Source: CCF Product & Engineering Handbook v0.5 FINAL + CCF Logo Analysis
+  
+  Visual Direction:
+  - Premium, modern, intelligent, professional, finance-oriented, elegant
+  - First-class dark foundation (#071426, #0B1D33, #101F34)
+  - Refined gold/amber accents (#D7A63D, #C6902D)
+  - Warm off-white readability (#F7F4EC) with muted slate typography (#A8B0BD)
+  =============================================================================
 */
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
 
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+@theme {
+  /* Semantic color mappings for Tailwind utilities (bg-background, text-foreground, etc.) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  /* CCF Core Palette Tokens */
+  --color-ccf-navy: var(--ccf-navy);
+  --color-ccf-navy-deep: var(--ccf-navy-deep);
+  --color-ccf-navy-secondary: var(--ccf-navy-secondary);
+  --color-ccf-surface: var(--ccf-surface);
+  --color-ccf-surface-elevated: var(--ccf-surface-elevated);
+  --color-ccf-surface-sunken: var(--ccf-surface-sunken);
+  --color-ccf-gold: var(--ccf-gold);
+  --color-ccf-gold-light: var(--ccf-gold-light);
+  --color-ccf-gold-dark: var(--ccf-gold-dark);
+  --color-ccf-gold-muted: var(--ccf-gold-muted);
+  --color-ccf-offwhite: var(--ccf-offwhite);
+  --color-ccf-muted: var(--ccf-muted);
 
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  /* Status Tokens */
+  --color-status-success: var(--status-success);
+  --color-status-success-foreground: var(--status-success-foreground);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-foreground: var(--status-warning-foreground);
+  --color-status-error: var(--status-error);
+  --color-status-error-foreground: var(--status-error-foreground);
 
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  /* Typography Fonts */
+  --font-sans: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-display), "Cormorant Garamond", "Cinzel", "Playfair Display", Georgia, serif;
+  --font-serif: var(--font-display), "Cormorant Garamond", "Cinzel", "Playfair Display", Georgia, serif;
 
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-
-  --radius: 0.625rem;
+  /* Radius Tokens (12-18px for cards, restrained for controls) */
+  --radius-xs: 0.25rem;    /* 4px */
+  --radius-sm: 0.375rem;   /* 6px */
+  --radius-md: 0.5rem;     /* 8px */
+  --radius-lg: 0.75rem;    /* 12px */
+  --radius-card: 1rem;     /* 16px */
+  --radius-xl: 1rem;       /* 16px */
+  --radius-2xl: 1.25rem;   /* 20px */
 }
 
+/*
+  -----------------------------------------------------------------------------
+  PRIMARY THEME: CCF DARK FOUNDATION (Default)
+  Dark surfaces are first-class as defined in the Handbook.
+  -----------------------------------------------------------------------------
+*/
+:root {
+  /* CCF Brand Palette */
+  --ccf-navy: #071426;              /* Primary deep navy foundation */
+  --ccf-navy-deep: #040c17;         /* Deepest background well */
+  --ccf-navy-secondary: #0B1D33;    /* Foundational secondary navy */
+  --ccf-surface: #101F34;           /* Base surface for cards and containers */
+  --ccf-surface-elevated: #162842;  /* Elevated surface (popovers, hover states) */
+  --ccf-surface-sunken: #050E1B;    /* Recessed wells, inputs, code blocks */
+
+  --ccf-gold: #D7A63D;              /* Primary radiant gold accent */
+  --ccf-gold-light: #E5BE65;        /* Light gold tint / interactive hover */
+  --ccf-gold-dark: #C6902D;         /* Deep warm gold for borders and active */
+  --ccf-gold-muted: rgba(215, 166, 61, 0.18); /* Restrained gold borders and badges */
+
+  --ccf-offwhite: #F7F4EC;          /* Primary off-white text and highlights */
+  --ccf-muted: #A8B0BD;             /* Secondary muted slate text */
+  --ccf-muted-dark: #64748B;        /* Tertiary subdued labels/hints */
+
+  /* Status Colors */
+  --status-success: #4FA77A;
+  --status-success-foreground: #FFFFFF;
+  --status-warning: #D6A24A;
+  --status-warning-foreground: #071426;
+  --status-error: #D16A63;
+  --status-error-foreground: #FFFFFF;
+
+  /* shadcn/ui Semantic Mappings (Dark theme by default) */
+  --background: #071426;
+  --foreground: #F7F4EC;
+
+  --card: #101F34;
+  --card-foreground: #F7F4EC;
+
+  --popover: #162842;
+  --popover-foreground: #F7F4EC;
+
+  --primary: #D7A63D;
+  --primary-foreground: #071426;    /* Dark navy text for optimal contrast on gold */
+
+  --secondary: #0B1D33;
+  --secondary-foreground: #F7F4EC;
+
+  --muted: #101F34;
+  --muted-foreground: #A8B0BD;
+
+  --accent: #162842;
+  --accent-foreground: #D7A63D;
+
+  --destructive: #D16A63;
+  --destructive-foreground: #FFFFFF;
+
+  --border: rgba(168, 176, 189, 0.18);
+  --input: rgba(168, 176, 189, 0.22);
+  --ring: #D7A63D;                  /* Gold focus ring for accessibility */
+
+  --radius: 0.75rem;                /* 12px baseline border radius */
+}
+
+/*
+  -----------------------------------------------------------------------------
+  .dark class: Mirrors :root so CCF dark theme is fully coherent
+  -----------------------------------------------------------------------------
+*/
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
+  --background: #071426;
+  --foreground: #F7F4EC;
+  --card: #101F34;
+  --card-foreground: #F7F4EC;
+  --popover: #162842;
+  --popover-foreground: #F7F4EC;
+  --primary: #D7A63D;
+  --primary-foreground: #071426;
+  --secondary: #0B1D33;
+  --secondary-foreground: #F7F4EC;
+  --muted: #101F34;
+  --muted-foreground: #A8B0BD;
+  --accent: #162842;
+  --accent-foreground: #D7A63D;
+  --destructive: #D16A63;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(168, 176, 189, 0.18);
+  --input: rgba(168, 176, 189, 0.22);
+  --ring: #D7A63D;
+}
 
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
+/*
+  -----------------------------------------------------------------------------
+  .light class: Coherent fallback mode maintaining CCF navy/gold identity
+  -----------------------------------------------------------------------------
+*/
+.light {
+  --background: #F7F4EC;
+  --foreground: #071426;
 
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --card: #FFFFFF;
+  --card-foreground: #071426;
 
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --popover: #FFFFFF;
+  --popover-foreground: #071426;
 
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --primary: #0B1D33;
+  --primary-foreground: #F7F4EC;
 
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
+  --secondary: #EFECE3;
+  --secondary-foreground: #071426;
 
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --muted: #E8E4D8;
+  --muted-foreground: #5A6578;
 
-  --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --accent: #E8E4D8;
+  --accent-foreground: #0B1D33;
 
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --destructive: #D16A63;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #D8D3C5;
+  --input: #D8D3C5;
+  --ring: #0B1D33;
+}
+
+/*
+  -----------------------------------------------------------------------------
+  GLOBAL BASE RESETS & ACCESSIBILITY DEFAULTS
+  -----------------------------------------------------------------------------
+*/
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* Accessible focus-visible state: clear gold ring */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Premium text selection highlighting */
+::selection {
+  background-color: rgba(215, 166, 61, 0.35);
+  color: #F7F4EC;
+}
+
+/* Reduced motion accessibility support */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+  -----------------------------------------------------------------------------
+  TYPOGRAPHY SCALE & ROLES
+  Editorial/display typography: Cormorant Garamond / Cinzel / serif
+  Functional/UI typography: Inter / sans-serif
+  -----------------------------------------------------------------------------
+*/
+
+/* Display Title: Hero headlines (Desktop: ~3.5rem-5rem | Mobile: ~2.4rem-3.1rem) */
+.type-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(2.4rem, 4vw + 1.25rem, 4.75rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+}
+
+/* Heading 1: Section lead titles */
+.type-h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 2.5vw + 1rem, 2.875rem);
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+}
+
+/* Heading 2: Major section headers */
+.type-h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.625rem, 1.8vw + 0.875rem, 2.25rem);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+/* Heading 3: Subsection & Card titles (Sans-serif functional readability) */
+.type-h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: clamp(1.25rem, 1vw + 0.875rem, 1.5rem);
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
+/* Heading 4: Small group headers */
+.type-h4 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+/* Body: Standard readable editorial/content text (line-height 1.55-1.7) */
+.type-body {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+/* Body Small: Compact body text */
+.type-body-small {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* Label: Form labels, controls, action elements (~0.82rem-0.92rem) */
+.type-label {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+/* Caption: Descriptions, secondary notes */
+.type-caption {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+/* Metadata: Badges, timestamps, tags, uppercase categories (~0.78rem-0.88rem) */
+.type-metadata {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 0.78125rem;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Semantic base heading defaults */
+h1 {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+}
+
+/*
+  -----------------------------------------------------------------------------
+  CCF VISUAL MOTIFS & UTILITY CLASSES
+  Prepares foundation for future UI work without bloating the stylesheet.
+  -----------------------------------------------------------------------------
+*/
+
+/* Restrained Gold Accent Line: 1px subtle divider */
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(215, 166, 61, 0.45) 50%, transparent 100%);
+  border: none;
+}
+
+/* Solid subtle gold border */
+.border-gold-subtle {
+  border-color: rgba(215, 166, 61, 0.22);
+}
+
+/* Elegant editorial gold heading text gradient */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #F7F4EC 20%, #D7A63D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Standard CCF Card Surface */
+.card-ccf {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 1rem);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.35), 0 0 1px 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Subtle financial grid pattern backdrop */
+.bg-ccf-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
 }
