@@ -156,6 +156,10 @@ model AdminUser {
   auditLogs     AuditLog[]     @relation("AuditLogActor")
   siteSettings  SiteSetting[]  @relation("SiteSettingUpdatedBy")
 
+  // Auth infrastructure back-relations
+  totpSecret    AdminTotpSecret?
+  recoveryCodes AdminRecoveryCode[]
+
   @@map("admin_users")
 }
 
@@ -580,4 +584,58 @@ model SiteSetting {
   updatedByAdmin AdminUser @relation("SiteSettingUpdatedBy", fields: [updatedBy], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@map("site_settings")
+}
+
+// =============================================================================
+// AUTHENTICATION INFRASTRUCTURE MODELS
+// Strictly for Auth.js, TOTP fallback, and break-glass recovery.
+// No business logic or user table duplication.
+// =============================================================================
+
+// --- 19. admin_verification_tokens -------------------------------------------
+// Stores magic-link one-time tokens for Auth.js.
+// Auth.js passes token pre-hashed (SHA-256). Stored as received.
+// Token is consumed/deleted atomically on use.
+
+model AdminVerificationToken {
+  identifier String   @map("identifier") @db.VarChar(320)
+  token      String   @unique @db.VarChar(255)
+  expires    DateTime @db.Timestamptz()
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  @@unique([identifier, token])
+  @@map("admin_verification_tokens")
+}
+
+// --- 20. admin_totp_secrets ---------------------------------------------------
+// Stores AES-256-GCM encrypted TOTP secret per admin.
+// Verified = true after initial successful code verification during setup.
+
+model AdminTotpSecret {
+  id        String   @id @default(uuid()) @db.Uuid
+  adminId   String   @unique @map("admin_id") @db.Uuid
+  secret    String   @db.Text
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("admin_totp_secrets")
+}
+
+// --- 21. admin_recovery_codes -------------------------------------------------
+// Stores bcrypt-hashed one-time recovery codes for break-glass admin access.
+// Code rows are deleted immediately upon consumption. Plaintext is never retained.
+
+model AdminRecoveryCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  adminId   String   @map("admin_id") @db.Uuid
+  codeHash  String   @map("code_hash") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([adminId], map: "idx_recovery_codes_admin_id")
+  @@map("admin_recovery_codes")
 }
