@@ -19,18 +19,15 @@ export type HomepageDepartment = CcfDepartment;
  */
 export const HOMEPAGE_DEPARTMENTS: readonly HomepageDepartment[] = CCF_DEPARTMENTS;
 
-export interface HomepageEvent {
-  id: string;
-  slug: string;
-  name: string;
-  edition?: string;
-  dateText: string;
-  venueText?: string;
-  shortDescription: string;
-  status: "UPCOMING" | "REGISTRATION NOT OPEN" | "PREVIOUS EVENT" | "REGISTRATION CLOSED";
-  statusVariant: "success" | "warning" | "destructive" | "info";
-  category?: string;
-}
+import { CCF_EVENTS, type CcfEvent } from "@/lib/data/events";
+
+export type HomepageEvent = CcfEvent;
+
+/**
+ * Confirmed CCF events shared from canonical events data.
+ * Historical events are marked as previous events, avoiding stale or unverified registration claims.
+ */
+export const HOMEPAGE_FEATURED_EVENTS: readonly HomepageEvent[] = CCF_EVENTS;
 
 import { CCF_LEADERSHIP, type CcfLeader } from "@/lib/data/members";
 
@@ -47,52 +44,6 @@ export interface ValueProposition {
   description: string;
   iconName: "BookOpen" | "LineChart" | "Trophy" | "Users";
 }
-
-/**
- * Confirmed CCF events from project documentation.
- * Historical events are marked as previous events, avoiding stale or unverified registration claims.
- */
-export const HOMEPAGE_FEATURED_EVENTS: readonly HomepageEvent[] = [
-  {
-    id: "evt-magnora-26",
-    slug: "magnora-26",
-    name: "Magnora’26",
-    edition: "2026",
-    dateText: "2026",
-    venueText: "Crescent Campus, Vandalur",
-    shortDescription:
-      "Finance and business symposium organized by CCF at Crescent College.",
-    status: "UPCOMING",
-    statusVariant: "warning",
-    category: "Symposium",
-  },
-  {
-    id: "evt-finrise-25",
-    slug: "finrise-25",
-    name: "FinRise’25",
-    edition: "2025",
-    dateText: "2025",
-    venueText: "Crescent Campus, Vandalur",
-    shortDescription:
-      "Finance and investment event organized by CCF.",
-    status: "PREVIOUS EVENT",
-    statusVariant: "info",
-    category: "Convention",
-  },
-  {
-    id: "evt-finvibe-s2",
-    slug: "finvibe-fiesta-s2",
-    name: "FinVibe Fiesta Season 02",
-    edition: "Season 02",
-    dateText: "April 2025",
-    venueText: "International Event • Crescent Campus",
-    shortDescription:
-      "Finance event organized by CCF featuring student activities and competitions.",
-    status: "PREVIOUS EVENT",
-    statusVariant: "info",
-    category: "Festival",
-  },
-] as const;
 
 /**
  * Core value proposition pillars reflecting CCF's mission at Crescent College.

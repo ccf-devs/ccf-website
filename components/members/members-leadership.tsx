@@ -18,7 +18,7 @@ export function MembersLeadership() {
           <SectionHeading
             eyebrow="CRESCENT CLUB OF FINANCE"
             title="Admin Board"
-            description="The confirmed executive leadership directing CCF activities and operations."
+            description="Meet the executive leadership directing CCF activities and operations."
           />
         </FadeIn>
 

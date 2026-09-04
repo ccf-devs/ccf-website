@@ -60,7 +60,6 @@ describe("Members Page Comprehensive Verification (Phase 5 Task 4)", () => {
     "Event Management (Finance)",
     "Event Management (Non-Finance)",
     "Public Relations",
-    "Event Management (Non-Finance)",
     "Finance Team",
     "Marketing Team",
     "IT Team",
@@ -138,7 +137,7 @@ describe("Members Page Comprehensive Verification (Phase 5 Task 4)", () => {
       expect(names).toContain("Abdullah");
     });
 
-    it("represents all 21 approved department and team labels without unwanted merging", () => {
+    it("represents all 20 approved department and team labels without unwanted merging", () => {
       const depts = Array.from(new Set(CCF_MEMBERS.map((m) => m.department)));
       expect(depts).toEqual(APPROVED_DEPARTMENTS);
 
@@ -156,7 +155,6 @@ describe("Members Page Comprehensive Verification (Phase 5 Task 4)", () => {
       expect(depts).toContain("Project Drafting");
       expect(depts).toContain("Drafting Team");
       expect(depts).toContain("Event Management (Finance)");
-      expect(depts).toContain("Event Management (Non-Finance)");
       expect(depts).toContain("Event Management (Non-Finance)");
     });
 
