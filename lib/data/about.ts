@@ -10,6 +10,8 @@
  * - Confirmed executive board only (Remi Kayalvizhi, Fizza Fathima, Zayan Ahmed) with no invented biographies.
  */
 
+import { CCF_EYEBROW } from "@/components/site/navigation-data";
+
 export interface AboutLeader {
   id: string;
   name: string;
@@ -48,7 +50,7 @@ export interface AboutVisionMission {
  */
 export const ABOUT_HERO = {
   eyebrow: "About CCF",
-  institution: "CRESCENT COLLEGE • FINANCE CLUB",
+  institution: CCF_EYEBROW,
   title: "Student-Led Finance at Crescent College",
   subtitle:
     "Dedicated to financial literacy, market awareness, and practical learning across all disciplines at B.S. Abdur Rahman Crescent Institute of Science and Technology.",

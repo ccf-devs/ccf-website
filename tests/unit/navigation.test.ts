@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PUBLIC_NAV_ITEMS, CCF_PUBLIC_INFO } from "@/components/site/navigation-data";
+import { PUBLIC_NAV_ITEMS, CCF_PUBLIC_INFO, CCF_EYEBROW } from "@/components/site/navigation-data";
 
 describe("Public Navigation & Shell Configuration", () => {
   it("contains all 7 required public navigation links", () => {
@@ -50,5 +50,9 @@ describe("Public Navigation & Shell Configuration", () => {
     expect(CCF_PUBLIC_INFO.campus).toContain("Crescent College, Vandalur");
     expect(CCF_PUBLIC_INFO.socials.instagram).toContain("instagram.com/crescentcluboffinance");
     expect(CCF_PUBLIC_INFO.socials.linkedin).toContain("linkedin.com/company/ccf-2024");
+  });
+
+  it("exports canonical CCF eyebrow text", () => {
+    expect(CCF_EYEBROW).toBe("CRESCENT CLUB OF FINANCE");
   });
 });

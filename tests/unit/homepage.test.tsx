@@ -123,7 +123,8 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
   describe("Section Component Rendering & Regressions", () => {
     it("renders Hero with verified label and without unverified Department of Student Affairs", () => {
       const html = renderToStaticMarkup(<Hero />);
-      expect(html).toContain("CRESCENT COLLEGE • FINANCE CLUB");
+      expect(html).toContain("CRESCENT CLUB OF FINANCE");
+      expect(html).not.toContain("CRESCENT COLLEGE • FINANCE CLUB");
       expect(html).not.toContain("Department of Student Affairs");
       expect(html).toContain("Investing in Knowledge");
       expect(html).toContain("Compounding Success");

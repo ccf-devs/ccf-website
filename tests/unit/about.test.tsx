@@ -127,13 +127,14 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
   });
 
   describe("CCF Logo Presentation & Circular Treatment", () => {
-    it("renders CcfLogo using transparent vector SVG without square background", () => {
+    it("renders CcfLogo using PNG filling the circular frame cleanly without square background", () => {
       const html = renderToStaticMarkup(<CcfLogo size="lg" priority />);
-      expect(html).toContain("ccf_logo_edited.svg");
+      expect(html).toContain("ccf_logo_edited.png");
       expect(html).toContain("rounded-full");
       expect(html).toContain("overflow-hidden");
       expect(html).toContain("border-ccf-gold/30");
-      expect(html).toContain("bg-ccf-surface");
+      expect(html).toContain("bg-white");
+      expect(html).toContain("object-cover");
       expect(html).toContain('alt="Crescent Club of Finance Emblem"');
     });
 
@@ -153,12 +154,12 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
 
     it("renders circular logo treatment consistently in AboutHero and Header", () => {
       const heroHtml = renderToStaticMarkup(<AboutHero />);
-      expect(heroHtml).toContain("ccf_logo_edited.svg");
+      expect(heroHtml).toContain("ccf_logo_edited.png");
       expect(heroHtml).toContain("overflow-hidden");
       expect(heroHtml).toContain("rounded-full");
 
       const headerHtml = renderToStaticMarkup(<Header />);
-      expect(headerHtml).toContain("ccf_logo_edited.svg");
+      expect(headerHtml).toContain("ccf_logo_edited.png");
       expect(headerHtml).toContain("overflow-hidden");
       expect(headerHtml).toContain("rounded-full");
     });
@@ -167,7 +168,8 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
   describe("Component Rendering & Structure", () => {
     it("renders AboutHero with verified identity and without unverified superlatives", () => {
       const html = renderToStaticMarkup(<AboutHero />);
-      expect(html).toContain("CRESCENT COLLEGE • FINANCE CLUB");
+      expect(html).toContain("CRESCENT CLUB OF FINANCE");
+      expect(html).not.toContain("CRESCENT COLLEGE • FINANCE CLUB");
       expect(html).toContain("Student-Led Finance at Crescent College");
       expect(html).toContain("B.S. Abdur Rahman Crescent Institute of Science and Technology");
       expect(html).not.toContain("Department of Student Affairs");

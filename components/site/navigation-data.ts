@@ -19,6 +19,11 @@ export const PUBLIC_NAV_ITEMS: readonly NavItem[] = [
 ] as const;
 
 /**
+ * Canonical eyebrow text used across CCF public hero sections.
+ */
+export const CCF_EYEBROW = "CRESCENT CLUB OF FINANCE";
+
+/**
  * Verified official CCF public contact and social details.
  * Source: Project Handbook & Official specifications. No invented details.
  */

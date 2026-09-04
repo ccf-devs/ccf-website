@@ -5,6 +5,7 @@ import { ArrowRight, Calendar, Sparkles } from "lucide-react";
 import { Container } from "@/components/site/container";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/motion/fade-in";
+import { CCF_EYEBROW } from "@/components/site/navigation-data";
 
 export function Hero() {
   return (
@@ -19,7 +20,7 @@ export function Hero() {
             <div className="inline-flex items-center gap-2.5 rounded-full border border-ccf-gold/30 bg-ccf-surface px-4 py-1.5 shadow-sm">
               <Sparkles className="h-3.5 w-3.5 text-ccf-gold" aria-hidden="true" />
               <span className="type-metadata text-ccf-offwhite font-medium">
-                CRESCENT COLLEGE • FINANCE CLUB
+                {CCF_EYEBROW}
               </span>
             </div>
           </FadeIn>
