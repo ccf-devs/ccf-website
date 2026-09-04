@@ -10,6 +10,15 @@
  * - leadership -> replaced by Prisma query `prisma.member.findMany(...)`
  */
 
+import { CCF_DEPARTMENTS, type CcfDepartment } from "@/lib/data/departments";
+
+export type HomepageDepartment = CcfDepartment;
+
+/**
+ * Five confirmed CCF departments shared from canonical departments data.
+ */
+export const HOMEPAGE_DEPARTMENTS: readonly HomepageDepartment[] = CCF_DEPARTMENTS;
+
 export interface HomepageEvent {
   id: string;
   slug: string;
@@ -21,14 +30,6 @@ export interface HomepageEvent {
   status: "UPCOMING" | "REGISTRATION NOT OPEN" | "PREVIOUS EVENT" | "REGISTRATION CLOSED";
   statusVariant: "success" | "warning" | "destructive" | "info";
   category?: string;
-}
-
-export interface HomepageDepartment {
-  id: string;
-  slug: string;
-  name: string;
-  shortDescription: string;
-  iconName: "TrendingUp" | "Monitor" | "Megaphone" | "FolderKanban" | "CalendarDays";
 }
 
 export interface HomepageLeader {
@@ -88,53 +89,6 @@ export const HOMEPAGE_FEATURED_EVENTS: readonly HomepageEvent[] = [
     status: "PREVIOUS EVENT",
     statusVariant: "info",
     category: "Festival",
-  },
-] as const;
-
-/**
- * Five confirmed CCF departments from Section 10.3 of the Product Engineering Handbook.
- * Descriptions are concise and neutral, avoiding unverified operational claims.
- */
-export const HOMEPAGE_DEPARTMENTS: readonly HomepageDepartment[] = [
-  {
-    id: "dept-finance",
-    slug: "finance-management",
-    name: "Finance Management",
-    shortDescription:
-      "Responsible for club budgeting, financial planning, and sponsorship tracking.",
-    iconName: "TrendingUp",
-  },
-  {
-    id: "dept-it-media",
-    slug: "it-media",
-    name: "IT & Media",
-    shortDescription:
-      "Manages the CCF web platform, technical systems, and digital media production.",
-    iconName: "Monitor",
-  },
-  {
-    id: "dept-marketing",
-    slug: "marketing-pr",
-    name: "Marketing & PR",
-    shortDescription:
-      "Handles publicity, social channels, and student communications across campus.",
-    iconName: "Megaphone",
-  },
-  {
-    id: "dept-projects",
-    slug: "project-department",
-    name: "Project Department",
-    shortDescription:
-      "Coordinates initiatives, workshops, and collaborative academic activities.",
-    iconName: "FolderKanban",
-  },
-  {
-    id: "dept-events",
-    slug: "event-management",
-    name: "Event Management",
-    shortDescription:
-      "Plans and executes club events, seminars, and student competitions.",
-    iconName: "CalendarDays",
   },
 ] as const;
 
