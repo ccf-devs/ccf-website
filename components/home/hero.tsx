@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { CcfLogo } from "@/components/site/logo";
 import { ArrowRight, Calendar, Sparkles } from "lucide-react";
 import { Container } from "@/components/site/container";
 import { Button } from "@/components/ui/button";
@@ -19,23 +19,14 @@ export function Hero() {
             <div className="inline-flex items-center gap-2.5 rounded-full border border-ccf-gold/30 bg-ccf-surface px-4 py-1.5 shadow-sm">
               <Sparkles className="h-3.5 w-3.5 text-ccf-gold" aria-hidden="true" />
               <span className="type-metadata text-ccf-offwhite font-medium">
-                CRESCENT CLUB OF FINANCE 
+                CRESCENT COLLEGE • FINANCE CLUB
               </span>
             </div>
           </FadeIn>
 
           {/* CCF Crest / Logo Presentation */}
           <FadeIn direction="up" delay={0.2}>
-            <div className="relative flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-full border border-ccf-gold/30 bg-ccf-surface p-3 shadow-md">
-              <Image
-                src="/images/ccf_logo_edited.png"
-                alt="Crescent Club of Finance Emblem"
-                width={80}
-                height={80}
-                className="h-full w-full object-contain"
-                priority
-              />
-            </div>
+            <CcfLogo size="lg" priority />
           </FadeIn>
 
           {/* Editorial Headline */}

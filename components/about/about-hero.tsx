@@ -1,0 +1,71 @@
+import React from "react";
+import { CcfLogo } from "@/components/site/logo";
+import Link from "next/link";
+import { ArrowRight, Sparkles, Calendar } from "lucide-react";
+import { Container } from "@/components/site/container";
+import { Button } from "@/components/ui/button";
+import { FadeIn } from "@/components/motion/fade-in";
+import { ABOUT_HERO } from "@/lib/data/about";
+
+export function AboutHero() {
+  return (
+    <section className="relative overflow-hidden py-16 md:py-24 border-b border-border/30 bg-gradient-to-b from-ccf-surface-sunken/60 via-background to-background">
+      {/* Subtle background radial glow */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-ccf-gold/5 rounded-full blur-3xl pointer-events-none"
+        aria-hidden="true"
+      />
+
+      <Container className="relative z-10">
+        <div className="flex flex-col items-center text-center space-y-6 max-w-4xl mx-auto">
+          {/* Institutional Badge */}
+          <FadeIn direction="up">
+            <div className="inline-flex items-center gap-2 rounded-full border border-ccf-gold/30 bg-ccf-surface-elevated/80 px-4 py-1.5 shadow-sm">
+              <Sparkles className="h-3.5 w-3.5 text-ccf-gold" aria-hidden="true" />
+              <span className="type-metadata text-ccf-offwhite font-medium tracking-wide">
+                {ABOUT_HERO.institution}
+              </span>
+            </div>
+          </FadeIn>
+
+          {/* CCF Crest / Logo Presentation */}
+          <FadeIn direction="up" delay={0.1}>
+            <CcfLogo size="lg" priority />
+          </FadeIn>
+
+          {/* Editorial Display Headline */}
+          <FadeIn direction="up" delay={0.2}>
+            <h1 className="type-display text-ccf-offwhite leading-tight md:leading-[1.15]">
+              {ABOUT_HERO.title}
+            </h1>
+          </FadeIn>
+
+          {/* Supporting Subtitle */}
+          <FadeIn direction="up" delay={0.3}>
+            <p className="type-body text-ccf-muted max-w-2xl text-base md:text-lg leading-relaxed">
+              {ABOUT_HERO.subtitle}
+            </p>
+          </FadeIn>
+
+          {/* Action CTAs */}
+          <FadeIn direction="up" delay={0.4}>
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-2 w-full sm:w-auto">
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link href="/events" className="inline-flex items-center justify-center gap-2">
+                  <Calendar className="h-4 w-4" aria-hidden="true" />
+                  <span>Explore Events</span>
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                <Link href="/join-us" className="inline-flex items-center justify-center gap-2">
+                  <span>Join CCF</span>
+                </Link>
+              </Button>
+            </div>
+          </FadeIn>
+        </div>
+      </Container>
+    </section>
+  );
+}

@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { CcfLogo } from "./logo";
 import { Mail, ExternalLink } from "lucide-react";
 import { Container } from "./container";
 import { PUBLIC_NAV_ITEMS, CCF_PUBLIC_INFO } from "./navigation-data";
@@ -22,15 +22,7 @@ export function Footer() {
               className="inline-flex items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`${CCF_PUBLIC_INFO.name} Home`}
             >
-              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-ccf-gold/30 bg-ccf-surface p-1">
-                <Image
-                  src="/images/ccf_logo_edited.png"
-                  alt="Crescent Club of Finance Logo"
-                  width={32}
-                  height={32}
-                  className="h-full w-full object-contain"
-                />
-              </div>
+              <CcfLogo size="sm" />
               <span className="font-display text-lg font-bold tracking-tight text-ccf-offwhite">
                 {CCF_PUBLIC_INFO.name}
               </span>

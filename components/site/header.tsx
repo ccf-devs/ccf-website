@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { CcfLogo } from "./logo";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { Container } from "./container";
@@ -23,16 +23,7 @@ export function Header() {
           className="group flex items-center gap-3 rounded-md py-1 pr-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`${CCF_PUBLIC_INFO.name} Home`}
         >
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-ccf-gold/30 bg-ccf-surface p-1 shadow-sm">
-            <Image
-              src="/images/ccf_logo_edited.png"
-              alt="CCF Crescent Club of Finance Logo"
-              width={36}
-              height={36}
-              className="h-full w-full object-contain"
-              priority
-            />
-          </div>
+          <CcfLogo size="md" priority />
 
           <div className="flex flex-col">
             <span className="font-display text-lg font-bold tracking-tight text-ccf-offwhite sm:text-xl">
@@ -53,7 +44,7 @@ export function Header() {
           <ul className="flex items-center gap-1">
             {PUBLIC_NAV_ITEMS.map((item) => {
               const isActive =
-                item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                item.href === "/" ? pathname === "/" : (pathname?.startsWith(item.href) ?? false);
 
               if (item.isCta) {
                 return (

@@ -81,7 +81,7 @@ export function MobileNav({ isOpen, onClose, items, pathname }: MobileNavProps) 
           <ul className="space-y-2">
             {items.map((item) => {
               const isActive =
-                item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                item.href === "/" ? pathname === "/" : (pathname?.startsWith(item.href) ?? false);
 
               if (item.isCta) {
                 return (
