@@ -11,13 +11,14 @@
  */
 
 import { CCF_EYEBROW } from "@/components/site/navigation-data";
+import { CCF_LEADERSHIP, type CcfLeader } from "@/lib/data/members";
 
-export interface AboutLeader {
-  id: string;
-  name: string;
-  role: string;
-  initials: string;
-}
+export type AboutLeader = CcfLeader;
+
+/**
+ * Confirmed CCF executive leadership board shared from canonical members data.
+ */
+export const ABOUT_LEADERSHIP: readonly AboutLeader[] = CCF_LEADERSHIP;
 
 export interface AboutPillar {
   id: string;
@@ -182,28 +183,3 @@ export const ABOUT_FOUNDATION = {
     "Today, CCF continues to operate under student governance with institutional coordination, organizing events, symposiums, and collaborative projects that welcome both Crescent students and external participants.",
   ],
 } as const;
-
-/**
- * Confirmed executive leadership board from Section 7 of the handbook.
- * Unverified biographies or descriptions are strictly omitted.
- */
-export const ABOUT_LEADERSHIP: readonly AboutLeader[] = [
-  {
-    id: "lead-president",
-    name: "Remi Kayalvizhi",
-    role: "President",
-    initials: "RK",
-  },
-  {
-    id: "lead-vp",
-    name: "Fizza Fathima",
-    role: "Vice President",
-    initials: "FF",
-  },
-  {
-    id: "lead-md",
-    name: "Zayan Ahmed",
-    role: "Managing Director",
-    initials: "ZA",
-  },
-] as const;

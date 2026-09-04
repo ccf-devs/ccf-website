@@ -32,12 +32,14 @@ export interface HomepageEvent {
   category?: string;
 }
 
-export interface HomepageLeader {
-  id: string;
-  name: string;
-  role: string;
-  initials: string;
-}
+import { CCF_LEADERSHIP, type CcfLeader } from "@/lib/data/members";
+
+export type HomepageLeader = CcfLeader;
+
+/**
+ * Confirmed CCF executive leadership board shared from canonical members data.
+ */
+export const HOMEPAGE_LEADERSHIP: readonly HomepageLeader[] = CCF_LEADERSHIP;
 
 export interface ValueProposition {
   id: string;
@@ -89,30 +91,6 @@ export const HOMEPAGE_FEATURED_EVENTS: readonly HomepageEvent[] = [
     status: "PREVIOUS EVENT",
     statusVariant: "info",
     category: "Festival",
-  },
-] as const;
-
-/**
- * Confirmed CCF executive leadership board from project documentation.
- */
-export const HOMEPAGE_LEADERSHIP: readonly HomepageLeader[] = [
-  {
-    id: "lead-president",
-    name: "Remi Kayalvizhi",
-    role: "President",
-    initials: "RK",
-  },
-  {
-    id: "lead-vp",
-    name: "Fizza Fathima",
-    role: "Vice President",
-    initials: "FF",
-  },
-  {
-    id: "lead-md",
-    name: "Zayan Ahmed",
-    role: "Managing Director",
-    initials: "ZA",
   },
 ] as const;
 
