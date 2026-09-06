@@ -22,12 +22,15 @@ export function EventsList() {
         {/* Section 1: Upcoming Events */}
         <div className="space-y-10">
           <FadeIn direction="up">
-            <SectionHeading
-              eyebrow={EVENTS_DIRECTORY_INFO.eyebrow}
-              title={EVENTS_DIRECTORY_INFO.upcomingHeading}
-              description={EVENTS_DIRECTORY_INFO.upcomingDescription}
-              align="left"
-            />
+            <div className="space-y-1">
+              <span className="editorial-tag block">01 / FORTHCOMING EVENTS</span>
+              <SectionHeading
+                eyebrow={EVENTS_DIRECTORY_INFO.eyebrow}
+                title={EVENTS_DIRECTORY_INFO.upcomingHeading}
+                description={EVENTS_DIRECTORY_INFO.upcomingDescription}
+                align="left"
+              />
+            </div>
           </FadeIn>
 
           <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
@@ -42,12 +45,15 @@ export function EventsList() {
         {/* Section 2: Past Events */}
         <div className="space-y-10 pt-8 border-t border-border/30">
           <FadeIn direction="up">
-            <SectionHeading
-              eyebrow={EVENTS_DIRECTORY_INFO.eyebrow}
-              title={EVENTS_DIRECTORY_INFO.pastHeading}
-              description={EVENTS_DIRECTORY_INFO.pastDescription}
-              align="left"
-            />
+            <div className="space-y-1">
+              <span className="editorial-tag block">02 / ARCHIVED PROCEEDINGS</span>
+              <SectionHeading
+                eyebrow={EVENTS_DIRECTORY_INFO.eyebrow}
+                title={EVENTS_DIRECTORY_INFO.pastHeading}
+                description={EVENTS_DIRECTORY_INFO.pastDescription}
+                align="left"
+              />
+            </div>
           </FadeIn>
 
           <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">

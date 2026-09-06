@@ -406,3 +406,59 @@ h3, h4, h5, h6 {
     linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
 }
+
+/* Editorial Research Tag (e.g. "01 / DEPARTMENTS", "EVENT BRIEF") */
+.editorial-tag {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(215, 166, 61, 0.85);
+}
+
+/* Financial Document Divider: subtle rule with gold central node */
+.finance-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(168, 176, 189, 0.18) 30%, rgba(168, 176, 189, 0.18) 70%, transparent 100%);
+  border: none;
+  margin: 1.5rem 0;
+}
+
+.finance-divider::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+  background-color: var(--ccf-gold);
+  opacity: 0.6;
+}
+
+/*
+  -----------------------------------------------------------------------------
+  CCF 3-TIER MOTION SYSTEM CLASSES
+  Level 1 - Micro (150-250ms)
+  Level 2 - Reveal (400-800ms)
+  Level 3 - Signature (800-1200ms)
+  -----------------------------------------------------------------------------
+*/
+.motion-micro {
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.motion-reveal {
+  transition-duration: 600ms;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.motion-signature {
+  transition-duration: 1100ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}

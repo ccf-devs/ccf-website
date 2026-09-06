@@ -11,6 +11,7 @@ export function ClubIntro() {
           {/* Left Heading */}
           <div className="lg:col-span-5 space-y-4">
             <FadeIn direction="right">
+              <span className="editorial-tag block mb-1">01 / INSTITUTIONAL IDENTITY</span>
               <SectionHeading
                 eyebrow="Who We Are"
                 title="A Community Built on Financial Acumen"

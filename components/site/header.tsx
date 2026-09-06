@@ -15,7 +15,12 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-ccf-navy/90 backdrop-blur-md">
+    <header
+      className={cn(
+        "sticky top-0 w-full border-b border-border/40 bg-ccf-navy/90 backdrop-blur-md transition-colors",
+        mobileMenuOpen ? "z-50" : "z-40"
+      )}
+    >
       <Container className="flex h-18 items-center justify-between">
         {/* Brand identity / Logo link */}
         <Link

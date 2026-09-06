@@ -2,6 +2,7 @@ import React from "react";
 import { GraduationCap, BookOpen, Calendar, CheckCircle2, AlertCircle } from "lucide-react";
 import { Container } from "@/components/site/container";
 import { Card } from "@/components/ui/card";
+import { CardReveal } from "@/components/ui/card-reveal";
 import { FadeIn } from "@/components/motion/fade-in";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 import { RECRUITMENT_ELIGIBILITY, RecruitmentEligibilityItem } from "@/lib/data/recruitment";
@@ -40,19 +41,21 @@ export function RecruitmentEligibility() {
             const Icon = ELIGIBILITY_ICONS[item.iconName];
             return (
               <StaggerItem key={item.id}>
-                <Card className="h-full bg-ccf-surface border-border/60 p-6 flex flex-col space-y-4 shadow-sm">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-ccf-gold/30 bg-ccf-surface-elevated text-ccf-gold">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </div>
-                  <div className="space-y-1.5 flex-1">
-                    <h3 className="text-base font-semibold text-ccf-offwhite">
-                      {item.title}
-                    </h3>
-                    <p className="type-body text-xs md:text-sm text-ccf-muted leading-relaxed">
-                      {item.description}
-                    </p>
-                  </div>
-                </Card>
+                <CardReveal className="h-full rounded-xl">
+                  <Card className="h-full bg-ccf-surface border-border/60 p-6 flex flex-col space-y-4 shadow-sm rounded-[inherit]">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg border border-ccf-gold/30 bg-ccf-surface-elevated text-ccf-gold">
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                    </div>
+                    <div className="space-y-1.5 flex-1">
+                      <h3 className="text-base font-semibold text-ccf-offwhite">
+                        {item.title}
+                      </h3>
+                      <p className="type-body text-xs md:text-sm text-ccf-muted leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                  </Card>
+                </CardReveal>
               </StaggerItem>
             );
           })}

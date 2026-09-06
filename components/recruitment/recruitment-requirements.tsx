@@ -2,6 +2,7 @@ import React from "react";
 import { User, Hash, Briefcase, GraduationCap, Calendar, MessageSquare, Info } from "lucide-react";
 import { Container } from "@/components/site/container";
 import { Card } from "@/components/ui/card";
+import { CardReveal } from "@/components/ui/card-reveal";
 import { FadeIn } from "@/components/motion/fade-in";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 import { RECRUITMENT_REQUIREMENTS, RecruitmentRequirementField } from "@/lib/data/recruitment";
@@ -41,26 +42,28 @@ export function RecruitmentRequirements() {
 
             return (
               <StaggerItem key={field.id}>
-                <Card className="h-full bg-ccf-surface border-border/60 p-6 flex flex-col justify-between space-y-4 shadow-sm">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-ccf-gold/30 bg-ccf-surface-elevated text-ccf-gold">
-                        <Icon className="h-5 w-5" aria-hidden="true" />
+                <CardReveal delay={index * 0.05} className="h-full rounded-xl">
+                  <Card className="h-full bg-ccf-surface border-border/60 p-6 flex flex-col justify-between space-y-4 shadow-sm rounded-[inherit]">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-ccf-gold/30 bg-ccf-surface-elevated text-ccf-gold">
+                          <Icon className="h-5 w-5" aria-hidden="true" />
+                        </div>
+                        <span className="font-mono text-xs font-semibold text-ccf-gold/60">
+                          {indexStr}
+                        </span>
                       </div>
-                      <span className="font-mono text-xs font-semibold text-ccf-gold/60">
-                        {indexStr}
-                      </span>
+                      <div className="space-y-1">
+                        <h3 className="text-base font-semibold text-ccf-offwhite">
+                          {field.label}
+                        </h3>
+                        <p className="type-body text-xs md:text-sm text-ccf-muted leading-relaxed">
+                          {field.description}
+                        </p>
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <h3 className="text-base font-semibold text-ccf-offwhite">
-                        {field.label}
-                      </h3>
-                      <p className="type-body text-xs md:text-sm text-ccf-muted leading-relaxed">
-                        {field.description}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
+                </CardReveal>
               </StaggerItem>
             );
           })}

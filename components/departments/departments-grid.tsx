@@ -12,6 +12,7 @@ import {
 import { Container } from "@/components/site/container";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { CardReveal } from "@/components/ui/card-reveal";
 import { Badge } from "@/components/ui/badge";
 import { FadeIn } from "@/components/motion/fade-in";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
@@ -31,11 +32,14 @@ export function DepartmentsGrid() {
       <Container className="space-y-12">
         <FadeIn direction="up">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <SectionHeading
-              eyebrow="Directory"
-              title="Operational Departments"
-              description="Explore the five departments that support CCF's activities and initiatives."
-            />
+            <div className="space-y-1">
+              <span className="editorial-tag block">01 / OPERATIONAL DIRECTORY</span>
+              <SectionHeading
+                eyebrow="Directory"
+                title="Operational Departments"
+                description="Explore the five departments that support CCF's activities and initiatives."
+              />
+            </div>
             <Badge variant="default" className="self-start md:self-auto shrink-0">
               5 Departments
             </Badge>
@@ -52,10 +56,11 @@ export function DepartmentsGrid() {
                 key={dept.id}
                 className={index === 4 ? "md:col-span-2 lg:col-span-1" : undefined}
               >
-                <Card
-                  hoverable
-                  className="h-full border-border/60 bg-ccf-surface p-6 flex flex-col justify-between space-y-6"
-                >
+                <CardReveal delay={index * 0.08} className="h-full rounded-2xl">
+                  <Card
+                    hoverable
+                    className="h-full border-border/60 bg-ccf-surface p-6 flex flex-col justify-between space-y-6 rounded-[inherit]"
+                  >
                   <div className="space-y-4">
                     {/* Header with Icon and Order Index */}
                     <div className="flex items-center justify-between">
@@ -110,6 +115,7 @@ export function DepartmentsGrid() {
                     </Link>
                   </div>
                 </Card>
+                </CardReveal>
               </StaggerItem>
             );
           })}

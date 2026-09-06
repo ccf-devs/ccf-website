@@ -50,7 +50,7 @@ export function MobileNav({ isOpen, onClose, items, pathname }: MobileNavProps) 
     >
       {/* Backdrop overlay */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-200"
+        className="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity duration-200"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -58,7 +58,7 @@ export function MobileNav({ isOpen, onClose, items, pathname }: MobileNavProps) 
       {/* Slide-in drawer from the right */}
       <div
         id="mobile-navigation"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-sm flex-col border-l border-border/40 bg-ccf-surface p-6 shadow-2xl transition-transform duration-200 ease-in-out"
+        className="fixed inset-y-0 right-0 z-50 flex h-[100dvh] w-full max-w-sm flex-col border-l border-border/60 bg-[#071426] p-6 shadow-2xl transition-transform duration-200 ease-in-out overscroll-contain"
       >
         {/* Header with logo name and close button */}
         <div className="flex items-center justify-between pb-6 border-b border-border/40">

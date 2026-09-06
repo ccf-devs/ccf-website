@@ -68,7 +68,7 @@ export function Footer() {
                 aria-label={`Email CCF at ${CCF_PUBLIC_INFO.email}`}
               >
                 <Mail className="h-4 w-4 shrink-0 text-ccf-gold mt-0.5" aria-hidden="true" />
-                <span className="break-all">{CCF_PUBLIC_INFO.email}</span>
+                <span className="text-xs xl:text-sm break-words">{CCF_PUBLIC_INFO.email}</span>
               </a>
 
               <div className="pt-2">

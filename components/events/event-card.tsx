@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Calendar, MapPin, ArrowRight } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { CardReveal } from "@/components/ui/card-reveal";
 import { Badge } from "@/components/ui/badge";
 import { type CcfEvent } from "@/lib/data/events";
 
@@ -13,10 +14,11 @@ export function EventCard({ event }: EventCardProps) {
   const isUpcoming = event.status === "UPCOMING";
 
   return (
-    <Card
-      hoverable
-      className="flex flex-col h-full bg-ccf-surface border-border/60 p-6 md:p-8 space-y-6 hover:border-ccf-gold/40 transition-colors shadow-sm"
-    >
+    <CardReveal className="h-full rounded-2xl">
+      <Card
+        hoverable
+        className="flex flex-col h-full bg-ccf-surface border-border/60 p-6 md:p-8 space-y-6 hover:border-ccf-gold/40 transition-colors shadow-sm rounded-[inherit]"
+      >
       <CardHeader className="p-0 space-y-3">
         {/* Category & Status Badges */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -76,5 +78,6 @@ export function EventCard({ event }: EventCardProps) {
         </Link>
       </CardFooter>
     </Card>
+    </CardReveal>
   );
 }

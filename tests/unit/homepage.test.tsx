@@ -16,6 +16,7 @@ import {
   LeadershipPreview,
   JoinCta,
 } from "@/components/home";
+import { CCF_EYEBROW } from "@/components/site/navigation-data";
 
 describe("Homepage Data & Components (Phase 5 Task 1)", () => {
   describe("Static & Mock Data Integrity", () => {
@@ -123,9 +124,10 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
   describe("Section Component Rendering & Regressions", () => {
     it("renders Hero with verified label and without unverified Department of Student Affairs", () => {
       const html = renderToStaticMarkup(<Hero />);
-      expect(html).toContain("CRESCENT CLUB OF FINANCE");
+      expect(html).toContain(CCF_EYEBROW);
       expect(html).not.toContain("CRESCENT COLLEGE • FINANCE CLUB");
       expect(html).not.toContain("Department of Student Affairs");
+      expect(html).not.toContain("CCF / 2026 // CRESCENT FINANCE SOCIETY");
       expect(html).toContain("Investing in Knowledge");
       expect(html).toContain("Compounding Success");
       expect(html).toContain("The student-led finance society of B.S. Abdur Rahman Crescent Institute of Science and Technology. Dedicated to financial literacy, market awareness, and practical learning.");
@@ -150,6 +152,9 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
       expect(html).toContain("PREVIOUS EVENT");
       expect(html).not.toContain("Upcoming • 2025");
       expect(html).not.toContain("REGISTRATION OPEN");
+      expect(html).toContain('href="/events/magnora-26"');
+      expect(html).toContain('href="/events/finrise-25"');
+      expect(html).toContain('href="/events/finvibe-fiesta-s2"');
     });
 
     it("renders ValuePropositionSection with all 4 themes", () => {

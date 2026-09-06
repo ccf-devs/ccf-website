@@ -12,6 +12,7 @@ export function AboutIntro() {
           {/* Left Column: Heading */}
           <div className="lg:col-span-5 space-y-4">
             <FadeIn direction="right">
+              <span className="editorial-tag block mb-1">01 / INSTITUTIONAL CHARTER</span>
               <SectionHeading
                 eyebrow="Introduction"
                 title="A Student Society Built on Practical Knowledge"

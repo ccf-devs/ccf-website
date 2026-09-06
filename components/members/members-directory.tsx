@@ -42,12 +42,15 @@ export function MembersDirectory() {
         {/* Section Header */}
         <FadeIn direction="up">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-border/30">
-            <SectionHeading
-              eyebrow="CRESCENT CLUB OF FINANCE"
-              title={MEMBERS_DIRECTORY_INFO.heading}
-              description={MEMBERS_DIRECTORY_INFO.description}
-              align="left"
-            />
+            <div className="space-y-1">
+              <span className="editorial-tag block">MEMBER DIRECTORY // 50 MEMBERS</span>
+              <SectionHeading
+                eyebrow="CRESCENT CLUB OF FINANCE"
+                title={MEMBERS_DIRECTORY_INFO.heading}
+                description={MEMBERS_DIRECTORY_INFO.description}
+                align="left"
+              />
+            </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-ccf-gold/30 bg-ccf-surface-elevated/60 text-ccf-gold font-mono text-sm self-start md:self-auto shrink-0 shadow-xs">
               <Users className="h-4 w-4" aria-hidden="true" />
               <span className="font-semibold">{MEMBERS_DIRECTORY_INFO.countText}</span>

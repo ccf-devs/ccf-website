@@ -43,6 +43,9 @@ export function EventDetails({ event }: EventDetailsProps) {
   return (
     <section className="py-8 md:py-12 border-b border-border/30">
       <FadeIn>
+        <div className="mb-4">
+          <span className="editorial-tag">EVENT BRIEF // SPECIFICATION</span>
+        </div>
         <h2 className="sr-only">Event Information</h2>
       </FadeIn>
       <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">

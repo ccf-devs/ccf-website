@@ -3,6 +3,7 @@ import { ImageIcon } from "lucide-react";
 import { FadeIn } from "@/components/motion/fade-in";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 import { Card } from "@/components/ui/card";
+import { SmoothImage } from "@/components/ui/smooth-image";
 import { CCF_EYEBROW } from "@/components/site/navigation-data";
 import { type CcfEventMedia, EVENT_NOTICES, getEventMediaUrl } from "@/lib/data/event-content";
 
@@ -37,15 +38,13 @@ export function EventGallery({ media = [] }: EventGalleryProps) {
             return (
               <StaggerItem key={item.id}>
                 <Card className="group overflow-hidden rounded-lg bg-ccf-surface border-border/50 transition-colors hover:border-ccf-gold/40">
-                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-ccf-navy-secondary">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={resolvedUrl}
-                      alt={item.altText}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  </div>
+                  <SmoothImage
+                    src={resolvedUrl}
+                    alt={item.altText}
+                    loading="lazy"
+                    containerClassName="aspect-[4/3] w-full"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
                   {item.caption && (
                     <div className="p-3 border-t border-border/30 bg-ccf-surface/80">
                       <p className="text-xs text-ccf-muted truncate">{item.caption}</p>
