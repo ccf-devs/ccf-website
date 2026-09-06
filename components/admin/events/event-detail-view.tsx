@@ -98,10 +98,23 @@ export function EventDetailView({ event }: EventDetailViewProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          {event.registrationMode !== RegistrationMode.NONE && (
+            <Button
+              asChild
+              variant="outline"
+              className="border-ccf-gold/40 text-ccf-gold hover:border-ccf-gold hover:bg-ccf-gold/10"
+            >
+              <Link href={`/admin/events/${event.id}/form`}>
+                <FileText className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                <span>Manage Form Engine</span>
+              </Link>
+            </Button>
+          )}
+
           <Button
             asChild
             variant="outline"
-            className="border-ccf-gold/40 text-ccf-gold hover:border-ccf-gold hover:bg-ccf-gold/10"
+            className="border-border text-ccf-muted hover:text-ccf-offwhite"
           >
             <Link href={`/admin/events/${event.id}/edit`}>
               <Edit className="h-4 w-4 mr-1.5" aria-hidden="true" />
@@ -183,12 +196,29 @@ export function EventDetailView({ event }: EventDetailViewProps) {
               </span>
             </div>
 
-            <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center justify-between py-2 border-b border-border/40">
               <span className="text-ccf-muted">Window Closes</span>
               <span className="font-semibold text-ccf-offwhite">
                 {formatDateDisplay(event.registrationClosesAt)}
               </span>
             </div>
+
+            {event.registrationMode !== RegistrationMode.NONE && (
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-ccf-muted">Form Engine</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-ccf-offwhite">
+                    {event.activeFormVersionId ? "Active Form Configured" : "No Form Published"}
+                  </span>
+                  <Link
+                    href={`/admin/events/${event.id}/form`}
+                    className="text-ccf-gold hover:underline text-[11px] font-medium"
+                  >
+                    Open Builder &rarr;
+                  </Link>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
