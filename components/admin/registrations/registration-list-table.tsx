@@ -10,11 +10,13 @@ import {
   Clock,
   Shield,
   CreditCard,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { TeamRosterDialog, TeamDetail } from "./team-roster-dialog";
 
 export interface AdminRegistrationItem {
   id: string;
@@ -31,6 +33,7 @@ export interface AdminRegistrationItem {
   createdAt: string;
   paymentStatus?: string | null;
   paymentAmount?: string | null;
+  team?: TeamDetail | null;
 }
 
 interface RegistrationListTableProps {
@@ -48,7 +51,10 @@ export function RegistrationListTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedEventId, setSelectedEventId] = useState<string>("ALL");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [selectedFormat, setSelectedFormat] = useState<string>("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedRosterRegistration, setSelectedRosterRegistration] =
+    useState<AdminRegistrationItem | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -62,6 +68,9 @@ export function RegistrationListTable({
       if (selectedCategory !== "ALL" && reg.participantType !== selectedCategory) {
         return false;
       }
+      if (selectedFormat !== "ALL" && reg.registrationType !== selectedFormat) {
+        return false;
+      }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchesName = reg.participantName.toLowerCase().includes(q);
@@ -72,11 +81,20 @@ export function RegistrationListTable({
         const matchesCollege = reg.collegeNormalized
           ? reg.collegeNormalized.toLowerCase().includes(q)
           : false;
-        return matchesName || matchesCode || matchesIdent || matchesCollege;
+        const matchesTeamName = reg.team?.name
+          ? reg.team.name.toLowerCase().includes(q)
+          : false;
+        return (
+          matchesName ||
+          matchesCode ||
+          matchesIdent ||
+          matchesCollege ||
+          matchesTeamName
+        );
       }
       return true;
     });
-  }, [registrations, selectedEventId, selectedCategory, searchQuery]);
+  }, [registrations, selectedEventId, selectedCategory, selectedFormat, searchQuery]);
 
   const handleDelete = async (registration: AdminRegistrationItem) => {
     const confirmed = window.confirm(
@@ -172,6 +190,18 @@ export function RegistrationListTable({
             ))}
           </select>
 
+          {/* Format Filter */}
+          <select
+            value={selectedFormat}
+            onChange={(e) => setSelectedFormat(e.target.value)}
+            aria-label="Filter by Registration Format"
+            className="h-9 px-3 rounded-md border border-border/60 bg-ccf-surface text-ccf-offwhite text-xs focus:outline-none focus:ring-1 focus:ring-ccf-gold"
+          >
+            <option value="ALL">All Formats</option>
+            <option value="INDIVIDUAL">Individual</option>
+            <option value="TEAM">Team</option>
+          </select>
+
           {/* Category Filter */}
           <select
             value={selectedCategory}
@@ -193,7 +223,7 @@ export function RegistrationListTable({
             <thead className="bg-ccf-surface-elevated border-b border-border/60 text-ccf-muted font-mono uppercase tracking-wider">
               <tr>
                 <th className="py-3 px-4">Code / Participant</th>
-                <th className="py-3 px-4">Category / Identifier</th>
+                <th className="py-3 px-4">Format / Category</th>
                 <th className="py-3 px-4">Event</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Payment</th>
@@ -218,13 +248,27 @@ export function RegistrationListTable({
                       <div className="font-medium text-ccf-offwhite">
                         {reg.participantName}
                       </div>
+                      {reg.registrationType === "TEAM" && reg.team?.name && (
+                        <div className="text-[11px] text-ccf-gold/90 font-medium truncate max-w-[180px]">
+                          Team: {reg.team.name}
+                        </div>
+                      )}
                     </td>
 
-                    <td className="py-3 px-4 space-y-0.5">
-                      <div>
+                    <td className="py-3 px-4 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {reg.registrationType === "TEAM" ? (
+                          <Badge variant="gold" className="text-[9px] uppercase font-mono px-1.5 py-0">
+                            Team ({reg.team?.members.length ?? 1})
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[9px] uppercase font-mono text-ccf-muted px-1.5 py-0">
+                            Individual
+                          </Badge>
+                        )}
                         <Badge
-                          variant={reg.participantType === "CRESCENT" ? "gold" : "outline"}
-                          className="text-[10px] uppercase font-mono"
+                          variant={reg.participantType === "CRESCENT" ? "secondary" : "outline"}
+                          className="text-[9px] uppercase font-mono px-1.5 py-0"
                         >
                           {reg.participantType}
                         </Badge>
@@ -281,7 +325,20 @@ export function RegistrationListTable({
                       })}
                     </td>
 
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      {reg.registrationType === "TEAM" && reg.team && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedRosterRegistration(reg)}
+                          className="h-7 px-2 text-xs text-ccf-gold hover:text-ccf-gold-light hover:bg-ccf-gold/10 mr-1"
+                          title="View Team Roster"
+                        >
+                          <Users className="h-3.5 w-3.5 mr-1" />
+                          Roster
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         variant="ghost"
@@ -305,6 +362,15 @@ export function RegistrationListTable({
           </table>
         </div>
       </Card>
+
+      {/* Team Roster Inspection Dialog */}
+      <TeamRosterDialog
+        isOpen={Boolean(selectedRosterRegistration)}
+        onClose={() => setSelectedRosterRegistration(null)}
+        team={selectedRosterRegistration?.team || null}
+        eventName={selectedRosterRegistration?.eventName || ""}
+        registrationCode={selectedRosterRegistration?.registrationCode || ""}
+      />
     </div>
   );
 }

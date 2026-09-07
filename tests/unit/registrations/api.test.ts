@@ -153,6 +153,128 @@ describe("Phase 8: API Route Handlers & Security (Areas J & L)", () => {
       expect(JSON.stringify(data)).not.toContain("Prisma");
       expect(JSON.stringify(data)).not.toContain("Unique constraint");
     });
+
+    it("processes valid team registration and returns 201 with team details", async () => {
+      (engine.executeRegistration as any).mockResolvedValue({
+        id: "reg-team-1",
+        registrationCode: "TEAM-REG-100",
+        status: "ACTIVE",
+        registrationType: "TEAM",
+        participantType: "CRESCENT",
+        participantName: "Leader Crescent",
+        createdAt: "2026-03-15T10:00:00.000Z",
+        event: { id: "ev-1", slug: "magnora-26", name: "Magnora 2026" },
+        team: {
+          id: "team-1",
+          name: "Alpha Quants",
+          members: [
+            {
+              name: "Leader Crescent",
+              participantType: "CRESCENT",
+              identifierNormalized: "210071601001",
+              isLeader: true,
+            },
+            {
+              name: "External Member",
+              participantType: "EXTERNAL",
+              collegeNormalized: "IIT Madras",
+              identifierNormalized: "CS21B001",
+              isLeader: false,
+            },
+          ],
+        },
+        payment: null,
+      });
+
+      const req = new NextRequest("http://localhost:3000/api/events/magnora-26/register", {
+        method: "POST",
+        body: JSON.stringify({
+          participantType: "CRESCENT",
+          registrationType: "TEAM",
+          responses: {
+            participant_name: "Leader Crescent",
+            crescent_rrn: "210071601001",
+          },
+          team: {
+            name: "Alpha Quants",
+            members: [
+              {
+                name: "Leader Crescent",
+                participantType: "CRESCENT",
+                identifierNormalized: "210071601001",
+                isLeader: true,
+              },
+              {
+                name: "External Member",
+                participantType: "EXTERNAL",
+                collegeNormalized: "IIT Madras",
+                identifierNormalized: "CS21B001",
+                isLeader: false,
+              },
+            ],
+          },
+        }),
+      });
+
+      const res = await registerHandler(req, {
+        params: Promise.resolve({ slug: "magnora-26" }),
+      });
+      const data = await res.json();
+
+      expect(res.status).toBe(201);
+      expect(data.success).toBe(true);
+      expect(data.registration.registrationType).toBe("TEAM");
+      expect(data.registration.team.name).toBe("Alpha Quants");
+      expect(data.registration.team.members.length).toBe(2);
+    });
+
+    it("handles team member already registered and maps to 400 PARTICIPATION_LOCKED", async () => {
+      (engine.executeRegistration as any).mockRejectedValue(
+        new RegistrationDomainError(
+          "Team member with RRN 210071601002 is already actively registered for this event.",
+          RegistrationErrorCode.PARTICIPATION_LOCKED,
+          400
+        )
+      );
+
+      const req = new NextRequest("http://localhost:3000/api/events/magnora-26/register", {
+        method: "POST",
+        body: JSON.stringify({
+          participantType: "CRESCENT",
+          registrationType: "TEAM",
+          responses: {
+            participant_name: "Leader Crescent",
+            crescent_rrn: "210071601001",
+          },
+          team: {
+            name: "Conflicted Team",
+            members: [
+              {
+                name: "Leader Crescent",
+                participantType: "CRESCENT",
+                identifierNormalized: "210071601001",
+                isLeader: true,
+              },
+              {
+                name: "Locked Member",
+                participantType: "CRESCENT",
+                identifierNormalized: "210071601002",
+                isLeader: false,
+              },
+            ],
+          },
+        }),
+      });
+
+      const res = await registerHandler(req, {
+        params: Promise.resolve({ slug: "magnora-26" }),
+      });
+      const data = await res.json();
+
+      expect(res.status).toBe(400);
+      expect(data.code).toBe("PARTICIPATION_LOCKED");
+      expect(data.error).toContain("already actively registered");
+    });
   });
 
   describe("GET /api/admin/events/[id]/registrations", () => {

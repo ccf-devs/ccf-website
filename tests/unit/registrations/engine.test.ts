@@ -1030,6 +1030,192 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
       expect(epCreateMock.mock.calls[1][0].data.collegeNormalized).toBe("LOYOLA COLLEGE");
       expect(epCreateMock.mock.calls[1][0].data.identifierNormalized).toBe("22-CS-101");
     });
+
+    it("synchronizes team name from dynamic responses (team_name field) if input.team.name is omitted", async () => {
+      (prisma.event.findUnique as any).mockResolvedValue(baseEvent);
+      const teamCreateMock = vi.fn().mockResolvedValue({ id: "team-synced", name: "Dynamic Quants" });
+
+      (prisma.$transaction as any).mockImplementation(async (callback: any) => {
+        return callback({
+          $queryRaw: vi.fn().mockResolvedValue([
+            {
+              id: "event-uuid-1",
+              capacity: 100,
+              capacity_mode: EventCapacityMode.PARTICIPANTS,
+              status: EventStatus.PUBLISHED,
+            },
+          ]),
+          eventParticipant: {
+            count: vi.fn().mockResolvedValue(0),
+            findFirst: vi.fn().mockResolvedValue(null),
+            create: vi.fn().mockResolvedValue({ id: "ep-1" }),
+          },
+          registration: {
+            create: vi.fn().mockResolvedValue({
+              id: "reg-1",
+              registrationCode: "TEST-REG-001",
+              status: "ACTIVE",
+              registrationType: RegistrationType.TEAM,
+              participantType: ParticipantType.CRESCENT,
+              participantName: "Primary Leader",
+              createdAt: new Date(),
+            }),
+          },
+          registrationResponse: {
+            create: vi.fn().mockResolvedValue({ id: "resp-1" }),
+          },
+          team: {
+            create: teamCreateMock,
+          },
+          teamMember: {
+            create: vi.fn().mockResolvedValue({ id: "member-1" }),
+          },
+        });
+      });
+
+      const result = await executeRegistration("magnora-26", {
+        registrationType: RegistrationType.TEAM,
+        participantType: ParticipantType.CRESCENT,
+        team: {
+          // name intentionally omitted in input.team
+          members: [
+            {
+              name: "Primary Leader",
+              participantType: ParticipantType.CRESCENT,
+              identifierNormalized: "210071601001",
+              isLeader: true,
+            },
+          ],
+        },
+        responses: {
+          participant_type: "CRESCENT",
+          participant_name: "Primary Leader",
+          crescent_rrn: "210071601001",
+          team_name: "Dynamic Quants",
+        },
+      });
+
+      expect(teamCreateMock).toHaveBeenCalledWith({
+        data: {
+          registrationId: "reg-1",
+          name: "Dynamic Quants",
+        },
+      });
+      expect(result.team?.name).toBe("Dynamic Quants");
+      expect(result.team?.members.length).toBe(1);
+    });
+
+    it("enforces configured minimum team size when defined on the form version", async () => {
+      const eventWithTeamSizeRule = {
+        ...baseEvent,
+        activeFormVersion: {
+          ...baseEvent.activeFormVersion,
+          eventFields: [
+            ...baseEvent.activeFormVersion.eventFields,
+            {
+              id: "field-team-size",
+              formVersionId: "fv-uuid-1",
+              key: "team_members",
+              label: "Team Members",
+              type: "NUMBER",
+              fieldScope: "TEAM_MEMBER",
+              required: false,
+              validation: { min: 3 },
+              displayOrder: 10,
+            },
+          ],
+        },
+      };
+      (prisma.event.findUnique as any).mockResolvedValue(eventWithTeamSizeRule);
+
+      await expect(
+        executeRegistration("magnora-26", {
+          registrationType: RegistrationType.TEAM,
+          participantType: ParticipantType.CRESCENT,
+          team: {
+            name: "Under-sized Team",
+            members: [
+              {
+                name: "Primary Leader",
+                participantType: ParticipantType.CRESCENT,
+                identifierNormalized: "210071601001",
+                isLeader: true,
+              },
+              {
+                name: "Second Member",
+                participantType: ParticipantType.CRESCENT,
+                identifierNormalized: "210071601002",
+                isLeader: false,
+              },
+            ],
+          },
+          responses: {
+            participant_type: "CRESCENT",
+            participant_name: "Primary Leader",
+            crescent_rrn: "210071601001",
+          },
+        })
+      ).rejects.toThrowError(/Team must have at least 3 members/);
+    });
+
+    it("enforces configured maximum team size when defined on the form version", async () => {
+      const eventWithTeamSizeRule = {
+        ...baseEvent,
+        activeFormVersion: {
+          ...baseEvent.activeFormVersion,
+          eventFields: [
+            ...baseEvent.activeFormVersion.eventFields,
+            {
+              id: "field-team-size",
+              formVersionId: "fv-uuid-1",
+              key: "team_members",
+              label: "Team Members",
+              type: "NUMBER",
+              fieldScope: "TEAM_MEMBER",
+              required: false,
+              validation: { max: 2 },
+              displayOrder: 10,
+            },
+          ],
+        },
+      };
+      (prisma.event.findUnique as any).mockResolvedValue(eventWithTeamSizeRule);
+
+      await expect(
+        executeRegistration("magnora-26", {
+          registrationType: RegistrationType.TEAM,
+          participantType: ParticipantType.CRESCENT,
+          team: {
+            name: "Over-sized Team",
+            members: [
+              {
+                name: "Primary Leader",
+                participantType: ParticipantType.CRESCENT,
+                identifierNormalized: "210071601001",
+                isLeader: true,
+              },
+              {
+                name: "Second Member",
+                participantType: ParticipantType.CRESCENT,
+                identifierNormalized: "210071601002",
+                isLeader: false,
+              },
+              {
+                name: "Third Member",
+                participantType: ParticipantType.CRESCENT,
+                identifierNormalized: "210071601003",
+                isLeader: false,
+              },
+            ],
+          },
+          responses: {
+            participant_type: "CRESCENT",
+            participant_name: "Primary Leader",
+            crescent_rrn: "210071601001",
+          },
+        })
+      ).rejects.toThrowError(/Team cannot exceed 2 members/);
+    });
   });
 
   describe("Capacity Limits & Concurrency Safety (Area H)", () => {

@@ -21,6 +21,7 @@ export interface FormRendererProps {
   submitLabel?: string;
   className?: string;
   readOnly?: boolean;
+  children?: React.ReactNode;
 }
 
 /**
@@ -38,6 +39,7 @@ export function FormRenderer({
   submitLabel = "Submit Registration",
   className,
   readOnly = false,
+  children,
 }: FormRendererProps) {
   // Sort fields by displayOrder
   const sortedFields = [...fields].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -105,6 +107,8 @@ export function FormRenderer({
           No form fields configured.
         </div>
       )}
+
+      {children}
 
       {onSubmit && !readOnly && (
         <div className="pt-4">

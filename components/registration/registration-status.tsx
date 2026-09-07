@@ -12,7 +12,8 @@ export type RegistrationStatusReason =
   | "FULL"
   | "EXTERNAL_MODE"
   | "NOT_INTERNAL"
-  | "NOT_ELIGIBLE";
+  | "NOT_ELIGIBLE"
+  | "UNAVAILABLE";
 
 interface RegistrationStatusNoticeProps {
   reason: RegistrationStatusReason;
@@ -82,6 +83,14 @@ export function RegistrationStatusNotice({
           tag: "INELIGIBLE",
           title: "Registration Restricted",
           description: `This event is restricted and not open for your participant category.`,
+        };
+      case "UNAVAILABLE":
+        return {
+          icon: AlertCircle,
+          iconColor: "text-amber-400 bg-amber-400/10 border-amber-400/30",
+          tag: "SERVICE UNAVAILABLE",
+          title: "Registration Temporarily Unavailable",
+          description: `Online registration is currently unavailable for ${eventName}. Please try again later or contact the event organizers.`,
         };
       default:
         return {

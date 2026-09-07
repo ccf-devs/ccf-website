@@ -3,6 +3,7 @@ import { ParticipantType, RegistrationType } from "@prisma/client";
 import { FieldType, FieldScope, EventFieldDomain } from "@/lib/forms/types";
 import {
   RegistrationSubmissionSchema,
+  TeamMemberSchema,
   extractAndNormalizeIdentity,
   validateDynamicResponses,
 } from "@/lib/registrations/validation";
@@ -253,6 +254,99 @@ describe("Phase 8: Registration Validation & Dynamic Form Integration", () => {
       expect(() => validateDynamicResponses(mockFields, responses)).toThrow(
         RegistrationDomainError
       );
+    });
+  });
+
+  describe("Phase 9: Team Member & Team Roster Validation", () => {
+    it("validates valid Crescent team member schema", () => {
+      const parsed = TeamMemberSchema.safeParse({
+        name: "Crescent Member",
+        participantType: ParticipantType.CRESCENT,
+        identifierNormalized: "210071601002",
+        phone: "9876543210",
+        academicDepartment: "Computer Science",
+        year: "3",
+        isLeader: false,
+      });
+
+      expect(parsed.success).toBe(true);
+    });
+
+    it("validates valid External team member schema", () => {
+      const parsed = TeamMemberSchema.safeParse({
+        name: "External Member",
+        participantType: ParticipantType.EXTERNAL,
+        collegeNormalized: "IIT Madras",
+        identifierNormalized: "CS21B001",
+        phone: "9876543211",
+        academicDepartment: "Data Science",
+        year: "2",
+        isLeader: false,
+      });
+
+      expect(parsed.success).toBe(true);
+    });
+
+    it("rejects team member with invalid name length (<2 chars)", () => {
+      const parsed = TeamMemberSchema.safeParse({
+        name: "A",
+        participantType: ParticipantType.CRESCENT,
+        identifierNormalized: "210071601002",
+      });
+
+      expect(parsed.success).toBe(false);
+    });
+
+    it("validates full team registration submission payload with mixed members", () => {
+      const parsed = RegistrationSubmissionSchema.safeParse({
+        participantType: ParticipantType.CRESCENT,
+        registrationType: RegistrationType.TEAM,
+        responses: {
+          participant_name: "Leader Crescent",
+          crescent_rrn: "210071601001",
+        },
+        team: {
+          name: "Alpha Quants",
+          members: [
+            {
+              name: "Leader Crescent",
+              participantType: ParticipantType.CRESCENT,
+              identifierNormalized: "210071601001",
+              isLeader: true,
+            },
+            {
+              name: "External Member",
+              participantType: ParticipantType.EXTERNAL,
+              collegeNormalized: "IIT Madras",
+              identifierNormalized: "CS21B001",
+              isLeader: false,
+            },
+          ],
+        },
+      });
+
+      expect(parsed.success).toBe(true);
+      expect(parsed.data?.registrationType).toBe(RegistrationType.TEAM);
+      expect(parsed.data?.team?.members?.length).toBe(2);
+    });
+
+    it("rejects team registration submission with invalid member structure", () => {
+      const parsed = RegistrationSubmissionSchema.safeParse({
+        participantType: ParticipantType.CRESCENT,
+        registrationType: RegistrationType.TEAM,
+        responses: {},
+        team: {
+          name: "Faulty Team",
+          members: [
+            {
+              name: "",
+              participantType: "UNKNOWN_TYPE",
+            },
+          ],
+        },
+      });
+
+      expect(parsed.success).toBe(false);
     });
   });
 });

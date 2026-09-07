@@ -6,7 +6,7 @@ import { Container } from "@/components/site/container";
 import { Badge } from "@/components/ui/badge";
 import { FadeIn } from "@/components/motion/fade-in";
 import { prisma } from "@/lib/db/client";
-import { toEventFieldDomain } from "@/lib/forms/types";
+import { toEventFieldDomain, EventFieldDomain } from "@/lib/forms/types";
 import {
   RegistrationMode,
   RegistrationMethod,
@@ -20,11 +20,6 @@ import {
   RegistrationStatusNotice,
 } from "@/components/registration";
 import { getEventBySlug } from "@/lib/data/events";
-import { CCF_SYSTEM_FIELD_PRESETS } from "@/lib/forms/system-fields";
-
-const DEV_OPEN_DATE = new Date("2026-01-01T00:00:00Z");
-const DEV_FUTURE_DATE = new Date("2026-12-31T23:59:59Z");
-const DEV_PAST_DATE = new Date("2025-01-01T00:00:00Z");
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -62,6 +57,7 @@ export default async function EventRegistrationPage({ params }: PageProps) {
   const { slug } = await params;
 
   let event: any = null;
+  let dbError = false;
   try {
     event = await prisma.event.findUnique({
       where: { slug },
@@ -76,36 +72,20 @@ export default async function EventRegistrationPage({ params }: PageProps) {
       },
     });
   } catch (error) {
-    // Graceful fallback for offline development environment
-    const staticEvent = getEventBySlug(slug);
-    if (!staticEvent) {
-      notFound();
-    }
-    const isUpcoming = staticEvent.status === "UPCOMING";
-    event = {
-      id: staticEvent.id,
-      slug: staticEvent.slug,
-      name: staticEvent.name,
-      status: isUpcoming ? EventStatus.PUBLISHED : EventStatus.ARCHIVED,
-      registrationMode: isUpcoming ? RegistrationMode.INTERNAL : RegistrationMode.NONE,
-      registrationMethod: isUpcoming ? RegistrationMethod.BUILT_IN : RegistrationMethod.NONE,
-      eligibilityCrescent: true,
-      eligibilityExternal: true,
-      capacity: 100,
-      capacityMode: EventCapacityMode.PARTICIPANTS,
-      paymentMode: PaymentMode.FREE,
-      registrationOpensAt: DEV_OPEN_DATE,
-      registrationClosesAt: isUpcoming ? DEV_FUTURE_DATE : DEV_PAST_DATE,
-      activeFormVersion: {
-        id: "fv-default",
-        eventFields: CCF_SYSTEM_FIELD_PRESETS.map((p, idx) => ({
-          id: `field-${p.key}`,
-          formVersionId: "fv-default",
-          displayOrder: idx + 1,
-          ...p,
-        })),
-      },
-    };
+    console.error(`[EventRegistrationPage] Database query failed for event slug "${slug}":`, error);
+    dbError = true;
+  }
+
+  if (dbError) {
+    return (
+      <Container className="py-12 md:py-20">
+        <RegistrationStatusNotice
+          reason="UNAVAILABLE"
+          eventName={getEventBySlug(slug)?.name || "this event"}
+          eventSlug={slug}
+        />
+      </Container>
+    );
   }
 
   if (!event) {
@@ -202,8 +182,17 @@ export default async function EventRegistrationPage({ params }: PageProps) {
         isFull = true;
       }
     }
-  } catch {
-    // Graceful offline fallback: allow registration form to render
+  } catch (error) {
+    console.error(`[EventRegistrationPage] Failed to evaluate event capacity for "${event.slug}":`, error);
+    return (
+      <Container className="py-12 md:py-20">
+        <RegistrationStatusNotice
+          reason="UNAVAILABLE"
+          eventName={event.name}
+          eventSlug={event.slug}
+        />
+      </Container>
+    );
   }
 
   if (isFull) {
@@ -231,7 +220,48 @@ export default async function EventRegistrationPage({ params }: PageProps) {
     );
   }
 
-  const domainFields = event.activeFormVersion.eventFields.map(toEventFieldDomain);
+  const domainFields: EventFieldDomain[] =
+    event.activeFormVersion.eventFields.map(toEventFieldDomain);
+
+  // Determine team configuration from active form version semantics
+  const teamRosterField = domainFields.find(
+    (f) =>
+      f.fieldScope === "TEAM_MEMBER" ||
+      (f.config?.isSystem && f.config.systemKey === "team_membership") ||
+      f.key === "team_members" ||
+      f.key === "team_membership"
+  );
+
+  const teamNameField = domainFields.find(
+    (f) =>
+      f.fieldScope === "TEAM" ||
+      (f.config?.isSystem && f.config.systemKey === "team_name") ||
+      f.key === "team_name"
+  );
+
+  const regTypeChoiceField = domainFields.find(
+    (f) =>
+      f.key === "registration_type" ||
+      (f.config?.isSystem && (f.config as any).systemKey === "registration_type")
+  );
+
+  const isTeamRegistration = Boolean(teamNameField || teamRosterField);
+  const allowModeChoice = Boolean(regTypeChoiceField);
+
+  const minTeamSize =
+    teamRosterField?.validation?.min ??
+    (teamRosterField?.config as any)?.minTeamSize;
+  const maxTeamSize =
+    teamRosterField?.validation?.max ??
+    (teamRosterField?.config as any)?.maxTeamSize;
+
+  const teamConfig = {
+    isTeamRegistration,
+    allowModeChoice,
+    teamNameRequired: teamNameField ? teamNameField.required : true,
+    minTeamSize: typeof minTeamSize === "number" ? minTeamSize : undefined,
+    maxTeamSize: typeof maxTeamSize === "number" ? maxTeamSize : undefined,
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -250,11 +280,18 @@ export default async function EventRegistrationPage({ params }: PageProps) {
 
           <div className="space-y-3 max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="editorial-tag text-ccf-gold">OFFICIAL REGISTRATION</span>
+              <span className="editorial-tag text-ccf-gold">
+                {isTeamRegistration ? "TEAM EVENT REGISTRATION" : "OFFICIAL REGISTRATION"}
+              </span>
               <span className="text-border/60">•</span>
               <Badge variant="success" dot className="text-xs">
                 Registration Open
               </Badge>
+              {isTeamRegistration && (
+                <Badge variant="gold" className="text-xs font-mono">
+                  Team Format
+                </Badge>
+              )}
               {event.paymentMode === "PAID" && event.feeAmount ? (
                 <Badge variant="gold" className="text-xs font-mono">
                   Fee: ₹{String(event.feeAmount)}
@@ -311,8 +348,10 @@ export default async function EventRegistrationPage({ params }: PageProps) {
               eligibilityExternal: event.eligibilityExternal,
               paymentMode: event.paymentMode,
               feeAmount: event.feeAmount ? String(event.feeAmount) : null,
+              capacityMode: event.capacityMode,
             }}
             fields={domainFields}
+            teamConfig={teamConfig}
           />
         </Container>
       </main>

@@ -39,6 +39,13 @@ export default async function AdminRegistrationsPage() {
           payment: {
             select: { status: true, amount: true },
           },
+          team: {
+            include: {
+              members: {
+                orderBy: { isLeader: "desc" },
+              },
+            },
+          },
         },
       }),
     ]);
@@ -59,6 +66,24 @@ export default async function AdminRegistrationsPage() {
       createdAt: r.createdAt.toISOString(),
       paymentStatus: r.payment?.status || null,
       paymentAmount: r.payment?.amount ? String(r.payment.amount) : null,
+      team: r.team
+        ? {
+            id: r.team.id,
+            name: r.team.name,
+            members: r.team.members.map((m) => ({
+              id: m.id,
+              name: m.name,
+              participantType: m.participantType,
+              identifierNormalized: m.identifierNormalized,
+              collegeNormalized: m.collegeNormalized,
+              phone: m.phone,
+              academicDepartment: m.academicDepartment,
+              year: m.year,
+              position: m.position,
+              isLeader: m.isLeader,
+            })),
+          }
+        : null,
     }));
   } catch (error) {
     console.error("[AdminRegistrationsPage] Failed to fetch registrations:", error);

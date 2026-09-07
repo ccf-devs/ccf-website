@@ -103,6 +103,17 @@ export interface RegistrationConfirmation {
     slug: string;
     name: string;
   };
+  team?: {
+    id: string;
+    name: string | null;
+    members: Array<{
+      name: string;
+      participantType: ParticipantType;
+      isLeader: boolean;
+      identifierNormalized?: string | null;
+      collegeNormalized?: string | null;
+    }>;
+  } | null;
   payment?: {
     status: PaymentStatus;
     method: PaymentMethod;

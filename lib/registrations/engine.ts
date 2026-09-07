@@ -10,6 +10,7 @@ import {
   PaymentMethod,
   PaymentStatus,
   EventStatus,
+  FieldScope,
   Prisma,
 } from "@prisma/client";
 import { toEventFieldDomain } from "@/lib/forms/types";
@@ -236,6 +237,8 @@ export async function executeRegistration(
     isLeader: boolean;
   }> = [];
 
+  let teamName: string | null = null;
+
   if (registrationType === RegistrationType.TEAM) {
     if (!input.team?.members || input.team.members.length === 0) {
       throw new RegistrationDomainError(
@@ -244,6 +247,23 @@ export async function executeRegistration(
         400
       );
     }
+
+    // Resolve team name from input or dynamic response (team_name or FieldScope.TEAM field)
+    const teamNameFromResponse =
+      validatedResponses["team_name"] ??
+      validatedResponses["teamName"] ??
+      validatedResponses[
+        domainFields.find(
+          (f) =>
+            f.fieldScope === FieldScope.TEAM ||
+            (f.config?.isSystem && f.config.systemKey === "team_name")
+        )?.key || ""
+      ];
+
+    teamName =
+      (input.team?.name && input.team.name.trim()) ||
+      (typeof teamNameFromResponse === "string" && teamNameFromResponse.trim()) ||
+      null;
 
     for (const member of input.team.members) {
       const memberName = normalizeName(member.name);
@@ -280,6 +300,38 @@ export async function executeRegistration(
         position: member.position,
         isLeader: member.isLeader || false,
       });
+    }
+
+    // Check team size validation ONLY if authoritative min/max bounds are configured in form
+    const teamRosterField = domainFields.find(
+      (f) =>
+        f.fieldScope === FieldScope.TEAM_MEMBER ||
+        (f.config?.isSystem && f.config.systemKey === "team_membership") ||
+        f.key === "team_members" ||
+        f.key === "team_membership"
+    );
+
+    const minTeamSize =
+      teamRosterField?.validation?.min ??
+      (teamRosterField?.config as any)?.minTeamSize;
+    const maxTeamSize =
+      teamRosterField?.validation?.max ??
+      (teamRosterField?.config as any)?.maxTeamSize;
+
+    if (typeof minTeamSize === "number" && normalizedTeamMembers.length < minTeamSize) {
+      throw new RegistrationDomainError(
+        `Team must have at least ${minTeamSize} members.`,
+        RegistrationErrorCode.INVALID_PARTICIPANT,
+        400
+      );
+    }
+
+    if (typeof maxTeamSize === "number" && normalizedTeamMembers.length > maxTeamSize) {
+      throw new RegistrationDomainError(
+        `Team cannot exceed ${maxTeamSize} members.`,
+        RegistrationErrorCode.INVALID_PARTICIPANT,
+        400
+      );
     }
 
     // Check duplicate identities within the submitted team
@@ -551,13 +603,16 @@ export async function executeRegistration(
     }
 
     // I. Create Team and TeamMembers if team registration
+    let teamRecord: { id: string; name: string | null } | null = null;
+
     if (registrationType === RegistrationType.TEAM) {
       const team = await tx.team.create({
         data: {
           registrationId: registration.id,
-          name: input.team?.name || null,
+          name: teamName,
         },
       });
+      teamRecord = team;
 
       for (const m of normalizedTeamMembers) {
         await tx.teamMember.create({
@@ -667,6 +722,20 @@ export async function executeRegistration(
         slug: event.slug,
         name: event.name,
       },
+      team:
+        registrationType === RegistrationType.TEAM && teamRecord
+          ? {
+              id: teamRecord.id,
+              name: teamRecord.name,
+              members: normalizedTeamMembers.map((m) => ({
+                name: m.name,
+                participantType: m.participantType,
+                isLeader: m.isLeader,
+                identifierNormalized: m.identifierNormalized,
+                collegeNormalized: m.collegeNormalized,
+              })),
+            }
+          : null,
       payment: paymentConfirmation,
     };
   });

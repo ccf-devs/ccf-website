@@ -50,7 +50,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
             You&apos;re Registered!
           </h1>
           <p className="text-sm text-ccf-muted max-w-md mx-auto">
-            Your registration for <span className="text-ccf-offwhite font-medium">{confirmation.event.name}</span> has been confirmed.
+            Your registration for <span className="text-ccf-offwhite font-medium">{confirmation.event?.name || (confirmation as any).eventName || "this event"}</span> has been confirmed.
           </p>
         </div>
 
@@ -83,12 +83,77 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
           </p>
         </div>
 
+        {/* Team Details (If Team Registration) */}
+        {confirmation.registrationType === "TEAM" && (
+          <div className="bg-ccf-surface-elevated/80 border border-border/60 rounded-xl p-5 space-y-4 max-w-md mx-auto text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-border/40">
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase font-mono tracking-wider text-ccf-gold">
+                  Team Registration
+                </span>
+                <h3 className="text-base font-bold text-ccf-offwhite">
+                  {confirmation.team?.name || "Team Roster"}
+                </h3>
+              </div>
+              <Badge variant="gold" className="text-xs font-mono">
+                {confirmation.team?.members.length ?? 1} Members
+              </Badge>
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-xs font-mono uppercase tracking-wider text-ccf-muted">
+                Confirmed Roster
+              </span>
+              <div className="divide-y divide-border/30 rounded-lg border border-border/40 bg-ccf-navy/40 overflow-hidden text-xs">
+                {(confirmation.team?.members || [
+                  {
+                    name: confirmation.participantName,
+                    participantType: confirmation.participantType,
+                    isLeader: true,
+                  },
+                ]).map((member, idx) => (
+                  <div key={idx} className="p-2.5 flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-ccf-offwhite truncate">
+                        {member.name}
+                      </span>
+                      {member.isLeader && (
+                        <Badge variant="gold" className="text-[9px] px-1 py-0">
+                          Leader
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-mono text-ccf-muted">
+                        {member.participantType}
+                      </span>
+                      {member.identifierNormalized && (
+                        <span className="text-[10px] font-mono text-ccf-gold">
+                          {member.identifierNormalized}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Participant & Event Summary Details */}
         <div className="grid grid-cols-2 gap-4 text-left max-w-md mx-auto text-xs bg-ccf-navy/40 p-4 rounded-lg border border-border/40">
           <div>
-            <span className="text-ccf-muted block">Participant</span>
+            <span className="text-ccf-muted block">
+              {confirmation.registrationType === "TEAM" ? "Team Leader" : "Participant"}
+            </span>
             <span className="text-ccf-offwhite font-medium truncate block">
               {confirmation.participantName}
+            </span>
+          </div>
+          <div>
+            <span className="text-ccf-muted block">Format</span>
+            <span className="text-ccf-offwhite font-medium block">
+              {confirmation.registrationType === "TEAM" ? "Team" : "Individual"}
             </span>
           </div>
           <div>
@@ -101,12 +166,6 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
             <span className="text-ccf-muted block">Status</span>
             <span className="text-emerald-400 font-medium font-mono block">
               {confirmation.status}
-            </span>
-          </div>
-          <div>
-            <span className="text-ccf-muted block">Event Slug</span>
-            <span className="text-ccf-offwhite font-mono block">
-              {confirmation.event.slug}
             </span>
           </div>
         </div>
