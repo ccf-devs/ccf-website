@@ -59,6 +59,49 @@ export function buildPaymentAuditMetadata(params: {
 }
 
 /**
+ * Standard audit actions for recruitment operations.
+ */
+export const RECRUITMENT_AUDIT_ACTIONS = {
+  SETTINGS_UPDATED: "RECRUITMENT_SETTINGS_UPDATED",
+  STATUS_CHANGED: "RECRUITMENT_STATUS_CHANGED",
+  APPLICATION_DELETED: "RECRUITMENT_APPLICATION_DELETED",
+} as const;
+
+export type RecruitmentAuditAction =
+  (typeof RECRUITMENT_AUDIT_ACTIONS)[keyof typeof RECRUITMENT_AUDIT_ACTIONS];
+
+export interface RecruitmentAuditMetadata {
+  [key: string]: unknown;
+  applicationId?: string;
+  departmentId?: string;
+  departmentName?: string;
+  fromStatus?: string;
+  toStatus?: string;
+  isOpen?: boolean;
+  notes?: string | null;
+}
+
+export function buildRecruitmentAuditMetadata(params: {
+  applicationId?: string;
+  departmentId?: string;
+  departmentName?: string;
+  fromStatus?: string;
+  toStatus?: string;
+  isOpen?: boolean;
+  notes?: string | null;
+}): RecruitmentAuditMetadata {
+  return {
+    applicationId: params.applicationId,
+    departmentId: params.departmentId,
+    departmentName: params.departmentName,
+    fromStatus: params.fromStatus,
+    toStatus: params.toStatus,
+    isOpen: params.isOpen,
+    notes: params.notes ? params.notes.trim() : null,
+  };
+}
+
+/**
  * Explicit safe allowlist metadata interfaces for event operations.
  * Strictly guarantees that no sensitive fields (RRNs, phone numbers,
  * auth tokens, secrets) are ever stored in audit metadata.

@@ -5,3 +5,4 @@ export { RecruitmentDepartments } from "./recruitment-departments";
 export { RecruitmentRequirements } from "./recruitment-requirements";
 export { RecruitmentProcess } from "./recruitment-process";
 export { RecruitmentCta } from "./recruitment-cta";
+export { RecruitmentForm, type DepartmentOption } from "./recruitment-form";
