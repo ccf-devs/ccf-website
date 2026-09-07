@@ -17,6 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TeamRosterDialog, TeamDetail } from "./team-roster-dialog";
+import {
+  PaymentVerificationDialog,
+  PaymentDetail,
+} from "./payment-verification-dialog";
 
 export interface AdminRegistrationItem {
   id: string;
@@ -33,6 +37,7 @@ export interface AdminRegistrationItem {
   createdAt: string;
   paymentStatus?: string | null;
   paymentAmount?: string | null;
+  payment?: PaymentDetail | null;
   team?: TeamDetail | null;
 }
 
@@ -52,8 +57,11 @@ export function RegistrationListTable({
   const [selectedEventId, setSelectedEventId] = useState<string>("ALL");
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedFormat, setSelectedFormat] = useState<string>("ALL");
+  const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string>("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [selectedRosterRegistration, setSelectedRosterRegistration] =
+    useState<AdminRegistrationItem | null>(null);
+  const [selectedPaymentRegistration, setSelectedPaymentRegistration] =
     useState<AdminRegistrationItem | null>(null);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
@@ -70,6 +78,13 @@ export function RegistrationListTable({
       }
       if (selectedFormat !== "ALL" && reg.registrationType !== selectedFormat) {
         return false;
+      }
+      if (selectedPaymentStatus !== "ALL") {
+        if (selectedPaymentStatus === "FREE") {
+          if (reg.paymentStatus !== null) return false;
+        } else if (reg.paymentStatus !== selectedPaymentStatus) {
+          return false;
+        }
       }
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
@@ -94,7 +109,14 @@ export function RegistrationListTable({
       }
       return true;
     });
-  }, [registrations, selectedEventId, selectedCategory, selectedFormat, searchQuery]);
+  }, [
+    registrations,
+    selectedEventId,
+    selectedCategory,
+    selectedFormat,
+    selectedPaymentStatus,
+    searchQuery,
+  ]);
 
   const handleDelete = async (registration: AdminRegistrationItem) => {
     const confirmed = window.confirm(
@@ -213,6 +235,20 @@ export function RegistrationListTable({
             <option value="CRESCENT">Crescent Student</option>
             <option value="EXTERNAL">External</option>
           </select>
+
+          {/* Payment Status Filter */}
+          <select
+            value={selectedPaymentStatus}
+            onChange={(e) => setSelectedPaymentStatus(e.target.value)}
+            aria-label="Filter by Payment Status"
+            className="h-9 px-3 rounded-md border border-border/60 bg-ccf-surface text-ccf-offwhite text-xs focus:outline-none focus:ring-1 focus:ring-ccf-gold"
+          >
+            <option value="ALL">All Payments</option>
+            <option value="PENDING">Pending Payment</option>
+            <option value="VERIFIED">Verified</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="FREE">Free Admission</option>
+          </select>
         </div>
       </div>
 
@@ -304,13 +340,29 @@ export function RegistrationListTable({
 
                     <td className="py-3 px-4">
                       {reg.paymentStatus ? (
-                        <Badge
-                          variant={reg.paymentStatus === "VERIFIED" ? "success" : "warning"}
-                          className="text-[10px] font-mono"
-                        >
-                          {reg.paymentStatus}
-                          {reg.paymentAmount ? ` (₹${reg.paymentAmount})` : ""}
-                        </Badge>
+                        <div className="space-y-1">
+                          <Badge
+                            variant={
+                              reg.paymentStatus === "VERIFIED"
+                                ? "success"
+                                : reg.paymentStatus === "REJECTED"
+                                ? "destructive"
+                                : "warning"
+                            }
+                            className="text-[10px] font-mono"
+                          >
+                            {reg.paymentStatus}
+                            {reg.paymentAmount ? ` (₹${reg.paymentAmount})` : ""}
+                          </Badge>
+                          {reg.payment?.userReference && (
+                            <div
+                              className="text-[10px] font-mono text-ccf-muted truncate max-w-[140px]"
+                              title={`UTR: ${reg.payment.userReference}`}
+                            >
+                              UTR: {reg.payment.userReference}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-ccf-muted text-[11px]">Free</span>
                       )}
@@ -326,6 +378,19 @@ export function RegistrationListTable({
                     </td>
 
                     <td className="py-3 px-4 text-right whitespace-nowrap">
+                      {reg.payment && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedPaymentRegistration(reg)}
+                          className="h-7 px-2 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 mr-1"
+                          title="Inspect and verify payment"
+                        >
+                          <CreditCard className="h-3.5 w-3.5 mr-1" />
+                          Payment
+                        </Button>
+                      )}
                       {reg.registrationType === "TEAM" && reg.team && (
                         <Button
                           type="button"
@@ -370,6 +435,36 @@ export function RegistrationListTable({
         team={selectedRosterRegistration?.team || null}
         eventName={selectedRosterRegistration?.eventName || ""}
         registrationCode={selectedRosterRegistration?.registrationCode || ""}
+      />
+
+      {/* Payment Verification Dialog */}
+      <PaymentVerificationDialog
+        isOpen={Boolean(selectedPaymentRegistration)}
+        onClose={() => setSelectedPaymentRegistration(null)}
+        registrationId={selectedPaymentRegistration?.id || ""}
+        eventId={selectedPaymentRegistration?.eventId || ""}
+        eventName={selectedPaymentRegistration?.eventName || ""}
+        registrationCode={selectedPaymentRegistration?.registrationCode || ""}
+        participantName={selectedPaymentRegistration?.participantName || ""}
+        payment={selectedPaymentRegistration?.payment || null}
+        onPaymentUpdated={(updatedPayment) => {
+          setRegistrations((prev) =>
+            prev.map((r) =>
+              r.id === selectedPaymentRegistration?.id
+                ? {
+                    ...r,
+                    paymentStatus: updatedPayment.status,
+                    paymentAmount: updatedPayment.amount,
+                    payment: updatedPayment,
+                  }
+                : r
+            )
+          );
+          setFeedback({
+            type: "success",
+            message: `Payment status for ${selectedPaymentRegistration?.registrationCode} updated to ${updatedPayment.status}.`,
+          });
+        }}
       />
     </div>
   );

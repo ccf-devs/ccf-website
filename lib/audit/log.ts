@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/client";
-import { EventStatus, Prisma } from "@prisma/client";
+import { EventStatus, PaymentStatus, Prisma } from "@prisma/client";
 
 /**
  * Standard audit actions for event management operations.
@@ -12,6 +12,51 @@ export const EVENT_AUDIT_ACTIONS = {
 
 export type EventAuditAction =
   (typeof EVENT_AUDIT_ACTIONS)[keyof typeof EVENT_AUDIT_ACTIONS];
+
+/**
+ * Standard audit actions for payment operations.
+ */
+export const PAYMENT_AUDIT_ACTIONS = {
+  VERIFIED: "PAYMENT_VERIFIED",
+  REJECTED: "PAYMENT_REJECTED",
+} as const;
+
+export type PaymentAuditAction =
+  (typeof PAYMENT_AUDIT_ACTIONS)[keyof typeof PAYMENT_AUDIT_ACTIONS];
+
+export interface PaymentAuditMetadata {
+  [key: string]: unknown;
+  paymentId: string;
+  registrationId: string;
+  registrationCode: string;
+  amount: string;
+  currency: string;
+  status: PaymentStatus;
+  userReference?: string | null;
+  notes?: string | null;
+}
+
+export function buildPaymentAuditMetadata(params: {
+  paymentId: string;
+  registrationId: string;
+  registrationCode: string;
+  amount: string | number;
+  currency?: string;
+  status: PaymentStatus;
+  userReference?: string | null;
+  notes?: string | null;
+}): PaymentAuditMetadata {
+  return {
+    paymentId: params.paymentId,
+    registrationId: params.registrationId,
+    registrationCode: params.registrationCode,
+    amount: String(params.amount),
+    currency: params.currency || "INR",
+    status: params.status,
+    userReference: params.userReference ? params.userReference.trim() : null,
+    notes: params.notes ? params.notes.trim() : null,
+  };
+}
 
 /**
  * Explicit safe allowlist metadata interfaces for event operations.

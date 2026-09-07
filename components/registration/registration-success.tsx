@@ -2,11 +2,22 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, Copy, Check, ArrowRight, QrCode } from "lucide-react";
+import {
+  CheckCircle2,
+  Copy,
+  Check,
+  ArrowRight,
+  QrCode,
+  Loader2,
+  AlertCircle,
+  ExternalLink,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { RegistrationConfirmation } from "@/lib/registrations/types";
+import { generateUpiQrCodeDataUrl } from "@/lib/payments/upi";
 
 interface RegistrationSuccessProps {
   confirmation: RegistrationConfirmation;
@@ -14,6 +25,25 @@ interface RegistrationSuccessProps {
 
 export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) {
   const [copied, setCopied] = React.useState(false);
+
+  // Payment state
+  const isPaid = Boolean(confirmation.payment);
+  const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
+  const [qrLoading, setQrLoading] = React.useState(Boolean(confirmation.payment?.paymentUri));
+  const [currentPaymentStatus, setCurrentPaymentStatus] = React.useState(
+    confirmation.payment?.status || "PENDING"
+  );
+  const [userReference, setUserReference] = React.useState(
+    confirmation.payment?.userReference || ""
+  );
+  const [submittingReference, setSubmittingReference] = React.useState(false);
+  const [referenceSubmitted, setReferenceSubmitted] = React.useState(
+    Boolean(confirmation.payment?.userReference)
+  );
+  const [referenceSuccessMsg, setReferenceSuccessMsg] = React.useState<string | null>(
+    confirmation.payment?.userReference ? "Payment reference on file." : null
+  );
+  const [referenceError, setReferenceError] = React.useState<string | null>(null);
 
   const copyToClipboard = async () => {
     try {
@@ -25,7 +55,77 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
     }
   };
 
-  const isPaid = Boolean(confirmation.payment);
+  // Generate dynamic QR code in-memory on mount if payment URI is present
+  React.useEffect(() => {
+    let isMounted = true;
+    if (confirmation.payment?.paymentUri) {
+      generateUpiQrCodeDataUrl(confirmation.payment.paymentUri)
+        .then((dataUrl) => {
+          if (isMounted) {
+            setQrDataUrl(dataUrl);
+            setQrLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to generate dynamic payment QR:", err);
+          if (isMounted) {
+            setQrLoading(false);
+          }
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [confirmation.payment?.paymentUri]);
+
+  // Handle UTR reference submission
+  const handleReferenceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReferenceError(null);
+    setReferenceSuccessMsg(null);
+
+    const trimmed = userReference.trim();
+    if (!trimmed) {
+      setReferenceError("Please enter your 12-digit UPI UTR or transaction reference number.");
+      return;
+    }
+
+    if (trimmed.length < 6 || trimmed.length > 50) {
+      setReferenceError("Payment reference must be between 6 and 50 characters.");
+      return;
+    }
+
+    setSubmittingReference(true);
+    try {
+      const res = await fetch(
+        `/api/events/${confirmation.event.slug}/registrations/${confirmation.registrationCode}/payment-reference`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userReference: trimmed }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setReferenceError(data.error || "Failed to submit reference. Please check and try again.");
+        return;
+      }
+
+      setReferenceSubmitted(true);
+      setReferenceSuccessMsg("UTR reference submitted successfully! Awaiting admin verification.");
+      if (data.payment?.status) {
+        setCurrentPaymentStatus(data.payment.status);
+      }
+    } catch {
+      setReferenceError("Network error while submitting reference. Please try again.");
+    } finally {
+      setSubmittingReference(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
@@ -50,7 +150,11 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
             You&apos;re Registered!
           </h1>
           <p className="text-sm text-ccf-muted max-w-md mx-auto">
-            Your registration for <span className="text-ccf-offwhite font-medium">{confirmation.event?.name || (confirmation as any).eventName || "this event"}</span> has been confirmed.
+            Your registration for{" "}
+            <span className="text-ccf-offwhite font-medium">
+              {confirmation.event?.name || (confirmation as any).eventName || "this event"}
+            </span>{" "}
+            has been confirmed.
           </p>
         </div>
 
@@ -79,7 +183,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
             </Button>
           </div>
           <p className="text-[11px] text-ccf-muted">
-            Save this code for check-in and all event correspondence.
+            Save this code for check-in, payment verification, and event correspondence.
           </p>
         </div>
 
@@ -172,44 +276,154 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
 
         {/* Payment Section (If PAID) */}
         {isPaid && confirmation.payment && (
-          <div className="border border-amber-500/30 bg-amber-500/5 rounded-xl p-5 text-left space-y-3 max-w-md mx-auto">
+          <div className="border border-amber-500/30 bg-amber-500/5 rounded-xl p-5 text-left space-y-4 max-w-md mx-auto">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                 <QrCode className="h-4 w-4" />
                 Payment Required
               </span>
-              <Badge variant="warning" className="text-[10px] font-mono">
-                {confirmation.payment.status}
+              <Badge
+                variant={
+                  currentPaymentStatus === "VERIFIED"
+                    ? "success"
+                    : currentPaymentStatus === "REJECTED"
+                    ? "destructive"
+                    : "warning"
+                }
+                className="text-[10px] font-mono"
+              >
+                {currentPaymentStatus}
               </Badge>
             </div>
+
             <p className="text-xs text-ccf-muted leading-relaxed">
-              Registration fee: <span className="font-semibold text-ccf-offwhite font-mono">₹{confirmation.payment.amount}</span>.
-              Please complete payment via UPI.
+              Registration fee:{" "}
+              <span className="font-semibold text-ccf-offwhite font-mono text-sm">
+                ₹{confirmation.payment.amount}
+              </span>
+              . Please complete payment via UPI.
             </p>
+
+            {/* Payee Details */}
             {confirmation.payment.upiId && (
-              <div className="bg-ccf-surface p-3 rounded border border-border/60 text-xs font-mono space-y-1">
-                <div className="flex justify-between">
+              <div className="bg-ccf-surface p-3 rounded-lg border border-border/60 text-xs font-mono space-y-1.5">
+                <div className="flex justify-between items-center">
                   <span className="text-ccf-muted">UPI ID:</span>
-                  <span className="text-ccf-gold font-bold">{confirmation.payment.upiId}</span>
+                  <span className="text-ccf-gold font-bold select-all">
+                    {confirmation.payment.upiId}
+                  </span>
                 </div>
                 {confirmation.payment.payeeName && (
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-ccf-muted">Payee:</span>
-                    <span className="text-ccf-offwhite">{confirmation.payment.payeeName}</span>
+                    <span className="text-ccf-offwhite font-medium">
+                      {confirmation.payment.payeeName}
+                    </span>
                   </div>
                 )}
               </div>
             )}
+
+            {/* Dynamic QR Code */}
             {confirmation.payment.paymentUri && (
-              <Button asChild variant="gold" size="sm" className="w-full">
-                <a href={confirmation.payment.paymentUri} target="_blank" rel="noopener noreferrer">
-                  Pay with UPI App
-                </a>
-              </Button>
+              <div className="space-y-3">
+                <div className="flex flex-col items-center justify-center p-4 bg-white rounded-xl border border-border/40 shadow-inner">
+                  {qrLoading ? (
+                    <div className="h-48 w-48 flex flex-col items-center justify-center gap-2 text-gray-400">
+                      <Loader2 className="h-6 w-6 animate-spin text-ccf-gold" />
+                      <span className="text-xs font-mono">Generating dynamic QR...</span>
+                    </div>
+                  ) : qrDataUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={qrDataUrl}
+                        alt="Scan to Pay with UPI"
+                        className="w-48 h-48 object-contain"
+                      />
+                      <span className="text-[11px] text-gray-700 font-mono mt-1 font-semibold">
+                        Scan with GPay / PhonePe / Paytm / Any UPI App
+                      </span>
+                    </>
+                  ) : (
+                    <div className="h-48 w-48 flex items-center justify-center text-xs text-gray-500 font-mono">
+                      QR code unavailable
+                    </div>
+                  )}
+                </div>
+
+                {/* Mobile UPI Intent Button */}
+                <Button asChild variant="gold" size="sm" className="w-full">
+                  <a
+                    href={confirmation.payment.paymentUri}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5"
+                  >
+                    <span>Pay with UPI App</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              </div>
             )}
-            <p className="text-[11px] text-ccf-muted italic">
-              Verification will be reviewed by the CCF administration team.
-            </p>
+
+            {/* UTR Reference Submission Form */}
+            <div className="pt-2 border-t border-border/40 space-y-3">
+              <div>
+                <span className="text-xs font-semibold text-ccf-offwhite block">
+                  Submit Payment Reference (UTR)
+                </span>
+                <span className="text-[11px] text-ccf-muted block">
+                  After completing your UPI transfer, enter your 12-digit transaction UTR number below.
+                </span>
+              </div>
+
+              <form onSubmit={handleReferenceSubmit} className="space-y-2.5">
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={userReference}
+                    onChange={(e) => setUserReference(e.target.value)}
+                    placeholder="e.g. 408112345678 (12-digit UTR)"
+                    disabled={submittingReference || currentPaymentStatus === "VERIFIED"}
+                    className="h-9 text-xs font-mono bg-ccf-surface border-border/80 focus-visible:border-ccf-gold"
+                  />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="sm"
+                    disabled={submittingReference || currentPaymentStatus === "VERIFIED"}
+                    className="h-9 px-3 text-xs border-ccf-gold/50 text-ccf-gold hover:bg-ccf-gold/10 shrink-0"
+                  >
+                    {submittingReference ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : referenceSubmitted ? (
+                      "Update UTR"
+                    ) : (
+                      "Submit UTR"
+                    )}
+                  </Button>
+                </div>
+
+                {referenceError && (
+                  <div className="p-2 rounded bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{referenceError}</span>
+                  </div>
+                )}
+
+                {referenceSuccessMsg && (
+                  <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span>{referenceSuccessMsg}</span>
+                  </div>
+                )}
+              </form>
+
+              <p className="text-[11px] text-ccf-muted italic">
+                Initiation is not proof of payment. Payment will be verified manually by CCF finance administrators.
+              </p>
+            </div>
           </div>
         )}
 

@@ -37,7 +37,22 @@ export default async function AdminRegistrationsPage() {
             select: { id: true, name: true, slug: true },
           },
           payment: {
-            select: { status: true, amount: true },
+            select: {
+              id: true,
+              status: true,
+              amount: true,
+              currency: true,
+              upiId: true,
+              payeeName: true,
+              paymentUri: true,
+              userReference: true,
+              verifiedAt: true,
+              verifiedBy: true,
+              verifiedByAdmin: {
+                select: { id: true, name: true },
+              },
+              createdAt: true,
+            },
           },
           team: {
             include: {
@@ -66,6 +81,22 @@ export default async function AdminRegistrationsPage() {
       createdAt: r.createdAt.toISOString(),
       paymentStatus: r.payment?.status || null,
       paymentAmount: r.payment?.amount ? String(r.payment.amount) : null,
+      payment: r.payment
+        ? {
+            id: r.payment.id,
+            status: r.payment.status,
+            amount: String(r.payment.amount),
+            currency: r.payment.currency,
+            upiId: r.payment.upiId,
+            payeeName: r.payment.payeeName,
+            paymentUri: r.payment.paymentUri,
+            userReference: r.payment.userReference,
+            verifiedBy: r.payment.verifiedBy,
+            verifierName: r.payment.verifiedByAdmin?.name || null,
+            verifiedAt: r.payment.verifiedAt?.toISOString() || null,
+            createdAt: r.payment.createdAt.toISOString(),
+          }
+        : null,
       team: r.team
         ? {
             id: r.team.id,

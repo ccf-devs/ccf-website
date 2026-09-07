@@ -15,6 +15,7 @@ import {
 } from "@prisma/client";
 import { toEventFieldDomain } from "@/lib/forms/types";
 import { createAuditLog } from "@/lib/audit/log";
+import { buildUpiUri } from "@/lib/payments/upi";
 import {
   RegistrationErrorCode,
   RegistrationDomainError,
@@ -47,27 +48,6 @@ function isPrismaUniqueConstraintError(err: unknown): boolean {
     err !== null &&
     (err as Record<string, unknown>).code === "P2002"
   );
-}
-
-/**
- * Builds a standard UPI payment URI for manual UPI transactions
- */
-function buildUpiUri(
-  upiId: string,
-  payeeName: string,
-  amount: number | string,
-  note?: string
-): string {
-  const params = new URLSearchParams({
-    pa: upiId,
-    pn: payeeName,
-    am: String(amount),
-    cu: "INR",
-  });
-  if (note) {
-    params.set("tn", note);
-  }
-  return `upi://pay?${params.toString()}`;
 }
 
 /**
