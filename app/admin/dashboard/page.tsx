@@ -1,6 +1,6 @@
 import { Metadata } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/config";
+import { getCurrentAdmin } from "@/lib/auth/session";
+import { AdminRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { Shield, CheckCircle2, Server, Database, Lock } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -11,6 +11,16 @@ import {
   AdminModuleCard,
   formatAdminRole,
 } from "@/components/admin";
+import {
+  DashboardMetricsGrid,
+  DashboardAlertBanner,
+  DashboardRecentActivity,
+  DashboardQuickActions,
+  DashboardErrorState,
+} from "@/components/admin/dashboard";
+import { getAdminDashboardData } from "@/lib/admin/dashboard";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard — Crescent Club of Finance",
@@ -19,23 +29,30 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminDashboardPage() {
-  const session = await getServerSession(authOptions);
+  const admin = await getCurrentAdmin();
 
-  if (!session?.user || session.user.active === false) {
-    redirect("/admin/auth/login");
+  if (
+    !admin ||
+    (admin.role !== AdminRole.CCF_ADMIN && admin.role !== AdminRole.IT_ADMIN)
+  ) {
+    redirect("/admin/auth/login?callbackUrl=/admin/dashboard");
+    return null;
   }
 
-  const roleLabel = formatAdminRole(session.user.role);
-  const adminName = session.user.name || "Administrator";
-  const adminEmail = session.user.email || "";
+  const roleLabel = formatAdminRole(admin.role);
+  const adminName = admin.name || "Administrator";
+  const adminEmail = admin.email || "";
+
+  // Authoritative server-side load of live operational dashboard data
+  const dashboardResult = await getAdminDashboardData();
 
   return (
-    <AdminShell user={session.user}>
+    <AdminShell user={admin}>
       {/* 1. Page Header */}
       <AdminPageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="Internal operations and platform management for Crescent Club of Finance."
+        description="Central administrative overview and operational health for Crescent Club of Finance."
       >
         <Badge
           variant="outline"
@@ -78,8 +95,30 @@ export default async function AdminDashboardPage() {
         </div>
       </Card>
 
-      {/* 3. Quick-Access Module Grid */}
-      <div className="space-y-4">
+      {/* 3. Operational Action Shortcuts */}
+      <DashboardQuickActions />
+
+      {/* 4. Operational Alerts or Fail-Closed State */}
+      {!dashboardResult.success ? (
+        <DashboardErrorState error={dashboardResult.error} />
+      ) : (
+        <>
+          {/* Actionable Alerts (e.g. pending payments) */}
+          <DashboardAlertBanner alerts={dashboardResult.alerts} />
+
+          {/* Aggregated Operational Metrics */}
+          <DashboardMetricsGrid metrics={dashboardResult.metrics} />
+
+          {/* Recent Audit & Registration Activity */}
+          <DashboardRecentActivity
+            activities={dashboardResult.recentActivities}
+            recentRegistrations={dashboardResult.recentRegistrations}
+          />
+        </>
+      )}
+
+      {/* 5. Canonical Operational Modules Grid */}
+      <div className="space-y-4 pt-2">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-semibold text-ccf-offwhite tracking-tight">
             Operational Modules
@@ -123,7 +162,7 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* 4. System & Operational Status Area */}
+      {/* 6. Platform Architecture Status */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <Card className="lg:col-span-6 bg-ccf-surface border-border/60 p-6 flex flex-col justify-between space-y-4 shadow-sm">
           <CardHeader className="p-0 space-y-1">
@@ -169,20 +208,20 @@ export default async function AdminDashboardPage() {
           <CardHeader className="p-0 space-y-1">
             <CardTitle className="text-base font-semibold text-ccf-offwhite flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-ccf-gold" aria-hidden="true" />
-              <span>Module Readiness</span>
+              <span>Operational Systems Status</span>
             </CardTitle>
             <CardDescription className="text-xs text-ccf-muted">
-              Current system implementation boundaries.
+              Live status across completed CCF operational subsystems.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="p-0 space-y-3 pt-2">
             <div className="rounded-lg border border-border/60 bg-ccf-surface-sunken p-4 space-y-2 text-xs">
               <p className="font-semibold text-ccf-offwhite">
-                Module Foundation Status
+                Live Subsystems Verified
               </p>
               <p className="text-ccf-muted leading-relaxed">
-                Administrative management modules (Events, Registrations, Recruitment, Members, Departments, Media, Notifications, Settings) are established as structural foundations and will be connected to transactional database workflows in subsequent implementation stages.
+                Events, Dynamic Form Engine, Individual and Team Registrations, Manual UPI Payment Tracking, and Student Recruitment are fully connected to transactional PostgreSQL workflows with audit logging.
               </p>
             </div>
           </CardContent>

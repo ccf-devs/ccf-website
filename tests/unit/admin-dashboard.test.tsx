@@ -35,6 +35,22 @@ vi.mock("next-auth/next", () => ({
   getServerSession: vi.fn(),
 }));
 
+// Mock auth session
+vi.mock("@/lib/auth/session", () => ({
+  getCurrentAdmin: vi.fn(),
+}));
+
+// Mock dashboard service
+vi.mock("@/lib/admin/dashboard", () => ({
+  getAdminDashboardData: vi.fn().mockResolvedValue({
+    success: false,
+    error: "Live operational data is temporarily unavailable.",
+    generatedAt: new Date().toISOString(),
+  }),
+}));
+
+import { getCurrentAdmin } from "@/lib/auth/session";
+
 describe("Admin Dashboard Foundation Verification (Phase 5 Task 8)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -298,16 +314,14 @@ describe("Admin Dashboard Foundation Verification (Phase 5 Task 8)", () => {
 
   describe("4. Admin Dashboard Landing Page Verified Content (Phase 5 Task 8 Corrections)", () => {
     it("renders corrected module count label, platform architecture status card, and access scope", async () => {
-      const mockSession = {
-        user: {
-          id: "admin-uuid-1",
-          name: "Test Admin",
-          email: "admin@crescent.education",
-          role: AdminRole.CCF_ADMIN,
-          active: true,
-        },
+      const mockAdmin = {
+        id: "admin-uuid-1",
+        name: "Test Admin",
+        email: "admin@crescent.education",
+        role: AdminRole.CCF_ADMIN,
+        active: true,
       };
-      (getServerSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockSession);
+      (getCurrentAdmin as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(mockAdmin);
 
       const pageJsx = await AdminDashboardPage();
       const html = renderToStaticMarkup(pageJsx);

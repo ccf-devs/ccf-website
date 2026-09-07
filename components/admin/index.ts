@@ -15,3 +15,4 @@ export { AdminSidebar } from "./admin-sidebar";
 export { AdminHeader } from "./admin-header";
 export { AdminMobileNav } from "./admin-mobile-nav";
 export { AdminShell } from "./admin-shell";
+export * from "./dashboard";
