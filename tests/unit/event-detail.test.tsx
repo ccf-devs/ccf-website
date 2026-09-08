@@ -358,8 +358,8 @@ describe("Event Detail Page & Showcase Verification (Phase 5 Task 5 Revision)", 
       expect(getEventMediaUrl("https://example.com/test.png")).toBe(
         "https://example.com/test.png"
       );
-      // Unresolved bare key without configured env URL safely returns null
-      expect(getEventMediaUrl("bare-key-123.jpg")).toBeNull();
+      // Bare key resolves to canonical /api/media when no custom env URL is configured
+      expect(getEventMediaUrl("bare-key-123.jpg")).toBe("/api/media/bare-key-123.jpg");
       expect(getEventMediaUrl(undefined)).toBeNull();
       expect(getEventMediaUrl("")).toBeNull();
     });

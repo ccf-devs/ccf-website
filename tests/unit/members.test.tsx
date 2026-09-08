@@ -164,7 +164,7 @@ describe("Members Page Comprehensive Verification (Phase 5 Task 4)", () => {
         expect((member as unknown as Record<string, unknown>).bio).toBeUndefined();
         expect((member as unknown as Record<string, unknown>).socialUrl).toBeUndefined();
         expect((member as unknown as Record<string, unknown>).photoUrl).toBeUndefined();
-        // photoObjectKey must be string or undefined (for future R2 object keys)
+        // photoObjectKey must be string or undefined (for future B2 object keys)
         if (member.photoObjectKey !== undefined) {
           expect(typeof member.photoObjectKey).toBe("string");
         }
@@ -332,11 +332,15 @@ describe("Members Page Comprehensive Verification (Phase 5 Task 4)", () => {
       expect(htmlWithPhoto).toContain('alt="Test Leader"');
     });
 
-    it("does not invent unverified R2 public domains when no media URL is configured", async () => {
+    it("resolves photoObjectKey to canonical /api/media when no custom NEXT_PUBLIC_MEDIA_URL is configured", async () => {
       const { getMemberPhotoUrl } = await import("@/lib/data/members");
-      // Key without http or / and without env base URL must safely return null
+      // Key without http or / resolves to canonical /api/media
       const resolved = getMemberPhotoUrl("photo-key-123.png");
-      expect(resolved).toBeNull();
+      expect(resolved).toBe("/api/media/photo-key-123.png");
+
+      // Undefined or empty photoObjectKey safely returns null
+      expect(getMemberPhotoUrl(undefined)).toBeNull();
+      expect(getMemberPhotoUrl("")).toBeNull();
 
       // All static CCF_MEMBERS records currently have undefined photoObjectKey
       for (const member of CCF_MEMBERS) {

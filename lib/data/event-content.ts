@@ -60,10 +60,9 @@ export function getEventContentBySlug(slug: string): CcfEventContent | undefined
 
 /**
  * Resolves a public URL for event media when objectKey is present.
- * Supports absolute URLs, root-relative paths, or R2-backed paths via
- * NEXT_PUBLIC_MEDIA_URL or NEXT_PUBLIC_R2_PUBLIC_URL.
- * If objectKey is absent or no base URL is configured, returns null to trigger
- * the approved empty state without inventing unverified domains.
+ * Supports absolute URLs, root-relative paths, or object-storage-backed paths via
+ * NEXT_PUBLIC_MEDIA_URL or canonical default "/api/media".
+ * If objectKey is absent, returns null to trigger the approved empty state.
  */
 export function getEventMediaUrl(objectKey?: string): string | null {
   if (!objectKey || typeof objectKey !== "string") {
@@ -80,10 +79,6 @@ export function getEventMediaUrl(objectKey?: string): string | null {
   ) {
     return trimmed;
   }
-  const baseUrl =
-    process.env.NEXT_PUBLIC_MEDIA_URL || process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-  if (baseUrl) {
-    return `${baseUrl.replace(/\/+$/, "")}/${trimmed.replace(/^\/+/, "")}`;
-  }
-  return null;
+  const baseUrl = process.env.NEXT_PUBLIC_MEDIA_URL || "/api/media";
+  return `${baseUrl.replace(/\/+$/, "")}/${trimmed.replace(/^\/+/, "")}`;
 }

@@ -492,8 +492,8 @@ export function getMemberInitials(name: string): string {
 
 /**
  * Resolves a public URL for a member's photo when photoObjectKey is present.
- * Supports absolute URLs, root-relative paths, or R2-backed paths via
- * NEXT_PUBLIC_MEDIA_URL or NEXT_PUBLIC_R2_PUBLIC_URL.
+ * Supports absolute URLs, root-relative paths, or object-storage-backed paths via
+ * NEXT_PUBLIC_MEDIA_URL or canonical default "/api/media".
  * If photoObjectKey is absent or cannot be resolved, returns null so the UI
  * renders a clean monogram/initials fallback.
  *
@@ -514,12 +514,8 @@ export function getMemberPhotoUrl(photoObjectKey?: string): string | null {
   ) {
     return trimmed;
   }
-  const baseUrl =
-    process.env.NEXT_PUBLIC_MEDIA_URL || process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-  if (baseUrl) {
-    return `${baseUrl.replace(/\/+$/, "")}/${trimmed.replace(/^\/+/, "")}`;
-  }
-  return null;
+  const baseUrl = process.env.NEXT_PUBLIC_MEDIA_URL || "/api/media";
+  return `${baseUrl.replace(/\/+$/, "")}/${trimmed.replace(/^\/+/, "")}`;
 }
 
 /**
