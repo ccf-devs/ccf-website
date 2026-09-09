@@ -7,11 +7,17 @@ import { Button } from "@/components/ui/button";
 interface DashboardErrorStateProps {
   error?: string;
   className?: string;
+  retryUrl?: string;
+  backUrl?: string;
+  backLabel?: string;
 }
 
 export function DashboardErrorState({
   error = "Live operational data is temporarily unavailable.",
   className = "",
+  retryUrl = "/admin/dashboard",
+  backUrl = "/admin/events",
+  backLabel = "Go to Events Console",
 }: DashboardErrorStateProps) {
   return (
     <Card
@@ -49,7 +55,7 @@ export function DashboardErrorState({
           size="sm"
           className="text-xs font-semibold px-4 h-9"
         >
-          <Link href="/admin/dashboard">
+          <Link href={retryUrl}>
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
             <span>Retry Connection</span>
           </Link>
@@ -61,8 +67,8 @@ export function DashboardErrorState({
           size="sm"
           className="text-xs text-ccf-muted hover:text-ccf-offwhite px-4 h-9"
         >
-          <Link href="/admin/events">
-            <span>Go to Events Console</span>
+          <Link href={backUrl}>
+            <span>{backLabel}</span>
             <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
           </Link>
         </Button>

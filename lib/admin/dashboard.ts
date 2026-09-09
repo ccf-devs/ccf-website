@@ -45,6 +45,22 @@ function formatAuditSummary(
       return `Deleted recruitment application and released active lock`;
     case "REGISTRATION_CANCELLED":
       return `Cancelled registration ${meta.registrationCode || ""}`.trim();
+    case "DEPARTMENT_INITIALIZED":
+      return `Initialized ${meta.createdCount || 0} canonical departments`;
+    case "DEPARTMENT_UPDATED":
+      return `Updated department "${meta.departmentName || "Department"}"`;
+    case "DEPARTMENT_STATUS_CHANGED":
+      return `Changed department "${meta.departmentName || "Department"}" status to ${meta.toActive ? "Active" : "Inactive"}`;
+    case "MEMBER_CREATED":
+      return `Added member "${meta.memberName || "Member"}" (${meta.position || ""})`.trim();
+    case "MEMBER_UPDATED":
+      return `Updated member "${meta.memberName || "Member"}"`;
+    case "MEMBER_TRANSFERRED":
+      return `Transferred member "${meta.memberName || "Member"}" to department`;
+    case "MEMBER_STATUS_CHANGED":
+      return `Changed member "${meta.memberName || "Member"}" status to ${meta.toVisibility ? "Visible" : "Hidden"}`;
+    case "MEMBER_DEACTIVATED":
+      return `Deactivated member "${meta.memberName || "Member"}"`;
     default:
       return `${action.replace(/_/g, " ").toLowerCase()} on ${entityType.toLowerCase()}`;
   }

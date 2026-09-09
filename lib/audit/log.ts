@@ -102,6 +102,58 @@ export function buildRecruitmentAuditMetadata(params: {
 }
 
 /**
+ * Standard audit actions for department management operations.
+ */
+export const DEPARTMENT_AUDIT_ACTIONS = {
+  INITIALIZED: "DEPARTMENT_INITIALIZED",
+  UPDATED: "DEPARTMENT_UPDATED",
+  STATUS_CHANGED: "DEPARTMENT_STATUS_CHANGED",
+} as const;
+
+export type DepartmentAuditAction =
+  (typeof DEPARTMENT_AUDIT_ACTIONS)[keyof typeof DEPARTMENT_AUDIT_ACTIONS];
+
+export interface DepartmentAuditMetadata {
+  [key: string]: unknown;
+  departmentId?: string;
+  departmentName?: string;
+  slug?: string;
+  fromActive?: boolean;
+  toActive?: boolean;
+  createdCount?: number;
+  initializedSlugs?: string[];
+  changedFields?: string[];
+}
+
+/**
+ * Standard audit actions for member directory operations.
+ */
+export const MEMBER_AUDIT_ACTIONS = {
+  CREATED: "MEMBER_CREATED",
+  UPDATED: "MEMBER_UPDATED",
+  TRANSFERRED: "MEMBER_TRANSFERRED",
+  STATUS_CHANGED: "MEMBER_STATUS_CHANGED",
+  DEACTIVATED: "MEMBER_DEACTIVATED",
+} as const;
+
+export type MemberAuditAction =
+  (typeof MEMBER_AUDIT_ACTIONS)[keyof typeof MEMBER_AUDIT_ACTIONS];
+
+export interface MemberAuditMetadata {
+  [key: string]: unknown;
+  memberId?: string;
+  memberName?: string;
+  position?: string | null;
+  departmentId?: string;
+  departmentName?: string;
+  fromDepartmentId?: string;
+  toDepartmentId?: string;
+  fromVisibility?: boolean;
+  toVisibility?: boolean;
+  changedFields?: string[];
+}
+
+/**
  * Explicit safe allowlist metadata interfaces for event operations.
  * Strictly guarantees that no sensitive fields (RRNs, phone numbers,
  * auth tokens, secrets) are ever stored in audit metadata.
