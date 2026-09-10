@@ -81,6 +81,8 @@ function formatAuditSummary(
       return `Deleted notification "${meta.title || "Notification"}"`;
     case "NOTIFICATION_MARK_ALL_READ":
       return `Marked all notifications as read (${meta.count ?? 0} updated)`;
+    case "REGISTRATION_EXPORTED":
+      return `Exported registrations for "${meta.eventName || "event"}" (${meta.registrationCount ?? 0} registrations)`;
     default:
       return `${action.replace(/_/g, " ").toLowerCase()} on ${entityType.toLowerCase()}`;
   }

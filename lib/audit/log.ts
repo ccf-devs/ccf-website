@@ -206,6 +206,25 @@ export interface NotificationAuditMetadata {
 }
 
 /**
+ * Standard audit actions for registration and export operations.
+ */
+export const REGISTRATION_AUDIT_ACTIONS = {
+  EXPORTED: "REGISTRATION_EXPORTED",
+} as const;
+
+export type RegistrationAuditAction =
+  (typeof REGISTRATION_AUDIT_ACTIONS)[keyof typeof REGISTRATION_AUDIT_ACTIONS];
+
+export interface RegistrationExportAuditMetadata {
+  [key: string]: unknown;
+  eventId: string;
+  eventSlug: string;
+  eventName: string;
+  registrationCount: number;
+  format: "csv";
+}
+
+/**
  * Explicit safe allowlist metadata interfaces for event operations.
  * Strictly guarantees that no sensitive fields (RRNs, phone numbers,
  * auth tokens, secrets) are ever stored in audit metadata.

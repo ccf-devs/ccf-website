@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -13,6 +15,9 @@ import {
   CheckCircle2,
   XCircle,
   Database,
+  Download,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -77,8 +82,90 @@ function formatDateDisplay(val: Date | string | null | undefined): string {
 }
 
 export function EventDetailView({ event }: EventDetailViewProps) {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportFeedback, setExportFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const handleExportCsv = async () => {
+    setIsExporting(true);
+    setExportFeedback(null);
+
+    try {
+      const res = await fetch(
+        `/api/admin/events/${event.id}/registrations/export`
+      );
+
+      if (!res.ok) {
+        let errMessage = "Failed to export registrations CSV.";
+        try {
+          const data = await res.json();
+          if (data.error) errMessage = data.error;
+        } catch {
+          // ignore json parse error
+        }
+        throw new Error(errMessage);
+      }
+
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = `CCF_${event.slug}_Registrations.csv`;
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setExportFeedback({
+        type: "success",
+        message: `Successfully exported CSV: ${filename}`,
+      });
+    } catch (err) {
+      console.error("[EventDetailView Export] Error:", err);
+      setExportFeedback({
+        type: "error",
+        message:
+          err instanceof Error
+            ? err.message
+            : "A network error occurred while exporting registrations.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
+      {/* Export Feedback Banner */}
+      {exportFeedback && (
+        <div
+          role="alert"
+          className={`p-4 rounded-lg flex items-center gap-3 text-sm ${
+            exportFeedback.type === "success"
+              ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+              : "bg-red-500/10 border border-red-500/30 text-red-400"
+          }`}
+        >
+          {exportFeedback.type === "success" ? (
+            <CheckCircle2 className="h-5 w-5 shrink-0" />
+          ) : (
+            <AlertCircle className="h-5 w-5 shrink-0" />
+          )}
+          <span>{exportFeedback.message}</span>
+        </div>
+      )}
+
       {/* Top Action & Navigation Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -99,16 +186,34 @@ export function EventDetailView({ event }: EventDetailViewProps) {
 
         <div className="flex items-center gap-2">
           {event.registrationMode !== RegistrationMode.NONE && (
-            <Button
-              asChild
-              variant="outline"
-              className="border-ccf-gold/40 text-ccf-gold hover:border-ccf-gold hover:bg-ccf-gold/10"
-            >
-              <Link href={`/admin/events/${event.id}/form`}>
-                <FileText className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                <span>Manage Form Engine</span>
-              </Link>
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleExportCsv}
+                disabled={isExporting}
+                className="border-border text-ccf-muted hover:text-ccf-offwhite"
+                title="Export event registrations as CSV"
+              >
+                {isExporting ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin text-ccf-gold" />
+                ) : (
+                  <Download className="h-4 w-4 mr-1.5 text-ccf-gold" aria-hidden="true" />
+                )}
+                <span>Export Registrations (CSV)</span>
+              </Button>
+
+              <Button
+                asChild
+                variant="outline"
+                className="border-ccf-gold/40 text-ccf-gold hover:border-ccf-gold hover:bg-ccf-gold/10"
+              >
+                <Link href={`/admin/events/${event.id}/form`}>
+                  <FileText className="h-4 w-4 mr-1.5" aria-hidden="true" />
+                  <span>Manage Form Engine</span>
+                </Link>
+              </Button>
+            </>
           )}
 
           <Button

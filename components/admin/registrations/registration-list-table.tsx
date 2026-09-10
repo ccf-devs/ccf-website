@@ -11,6 +11,7 @@ import {
   Shield,
   CreditCard,
   Users,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,7 @@ export function RegistrationListTable({
   const [selectedFormat, setSelectedFormat] = useState<string>("ALL");
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string>("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   const [selectedRosterRegistration, setSelectedRosterRegistration] =
     useState<AdminRegistrationItem | null>(null);
   const [selectedPaymentRegistration, setSelectedPaymentRegistration] =
@@ -117,6 +119,72 @@ export function RegistrationListTable({
     selectedPaymentStatus,
     searchQuery,
   ]);
+
+  const handleExportCsv = async () => {
+    if (selectedEventId === "ALL") {
+      setFeedback({
+        type: "error",
+        message: "Please select a specific event from the event filter to export its registrations.",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    setFeedback(null);
+
+    try {
+      const res = await fetch(
+        `/api/admin/events/${selectedEventId}/registrations/export`
+      );
+
+      if (!res.ok) {
+        let errMessage = "Failed to export registrations CSV.";
+        try {
+          const data = await res.json();
+          if (data.error) errMessage = data.error;
+        } catch {
+          // ignore json parse error
+        }
+        throw new Error(errMessage);
+      }
+
+      // Extract filename from header if present
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = "registrations.csv";
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setFeedback({
+        type: "success",
+        message: `Successfully exported CSV: ${filename}`,
+      });
+    } catch (err) {
+      console.error("[Export CSV] Error:", err);
+      setFeedback({
+        type: "error",
+        message:
+          err instanceof Error
+            ? err.message
+            : "A network error occurred while exporting registrations.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleDelete = async (registration: AdminRegistrationItem) => {
     const confirmed = window.confirm(
@@ -249,6 +317,28 @@ export function RegistrationListTable({
             <option value="REJECTED">Rejected</option>
             <option value="FREE">Free Admission</option>
           </select>
+
+          {/* Export CSV Action */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportCsv}
+            disabled={selectedEventId === "ALL" || isExporting}
+            className="h-9 px-3 border-border/60 bg-ccf-surface text-ccf-offwhite hover:bg-ccf-surface-elevated hover:text-ccf-gold text-xs transition-colors"
+            title={
+              selectedEventId === "ALL"
+                ? "Select a specific event to export registrations"
+                : "Export registrations as CSV"
+            }
+          >
+            {isExporting ? (
+              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin text-ccf-gold" />
+            ) : (
+              <Download className="h-3.5 w-3.5 mr-1.5 text-ccf-gold" />
+            )}
+            <span>Export CSV</span>
+          </Button>
         </div>
       </div>
 
