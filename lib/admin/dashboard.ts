@@ -61,6 +61,14 @@ function formatAuditSummary(
       return `Changed member "${meta.memberName || "Member"}" status to ${meta.toVisibility ? "Visible" : "Hidden"}`;
     case "MEMBER_DEACTIVATED":
       return `Deactivated member "${meta.memberName || "Member"}"`;
+    case "MEDIA_UPLOADED":
+      return `Uploaded media asset "${meta.objectKey || "media"}"`;
+    case "MEDIA_UPDATED":
+      return `Updated media asset "${meta.objectKey || "media"}"`;
+    case "MEDIA_VISIBILITY_CHANGED":
+      return `Changed media visibility to ${meta.toVisibility ? "Visible" : "Hidden"}`;
+    case "MEDIA_DELETED":
+      return `Deleted media asset "${meta.objectKey || "media"}"`;
     default:
       return `${action.replace(/_/g, " ").toLowerCase()} on ${entityType.toLowerCase()}`;
   }

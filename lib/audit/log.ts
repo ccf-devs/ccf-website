@@ -154,6 +154,31 @@ export interface MemberAuditMetadata {
 }
 
 /**
+ * Standard audit actions for media management operations.
+ */
+export const MEDIA_AUDIT_ACTIONS = {
+  UPLOADED: "MEDIA_UPLOADED",
+  UPDATED: "MEDIA_UPDATED",
+  VISIBILITY_CHANGED: "MEDIA_VISIBILITY_CHANGED",
+  DELETED: "MEDIA_DELETED",
+} as const;
+
+export type MediaAuditAction =
+  (typeof MEDIA_AUDIT_ACTIONS)[keyof typeof MEDIA_AUDIT_ACTIONS];
+
+export interface MediaAuditMetadata {
+  [key: string]: unknown;
+  mediaId?: string;
+  objectKey?: string;
+  mimeType?: string;
+  eventId?: string | null;
+  eventName?: string | null;
+  fromVisibility?: boolean;
+  toVisibility?: boolean;
+  changedFields?: string[];
+}
+
+/**
  * Explicit safe allowlist metadata interfaces for event operations.
  * Strictly guarantees that no sensitive fields (RRNs, phone numbers,
  * auth tokens, secrets) are ever stored in audit metadata.
