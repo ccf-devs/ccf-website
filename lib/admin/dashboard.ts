@@ -69,6 +69,18 @@ function formatAuditSummary(
       return `Changed media visibility to ${meta.toVisibility ? "Visible" : "Hidden"}`;
     case "MEDIA_DELETED":
       return `Deleted media asset "${meta.objectKey || "media"}"`;
+    case "NOTIFICATION_CREATED":
+      return `Created notification "${meta.title || "Notification"}"`;
+    case "NOTIFICATION_UPDATED":
+      return `Updated notification "${meta.title || "Notification"}"`;
+    case "NOTIFICATION_READ":
+      return `Marked notification "${meta.title || "Notification"}" as read`;
+    case "NOTIFICATION_UNREAD":
+      return `Marked notification "${meta.title || "Notification"}" as unread`;
+    case "NOTIFICATION_DELETED":
+      return `Deleted notification "${meta.title || "Notification"}"`;
+    case "NOTIFICATION_MARK_ALL_READ":
+      return `Marked all notifications as read (${meta.count ?? 0} updated)`;
     default:
       return `${action.replace(/_/g, " ").toLowerCase()} on ${entityType.toLowerCase()}`;
   }

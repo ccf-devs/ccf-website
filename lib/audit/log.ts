@@ -179,6 +179,33 @@ export interface MediaAuditMetadata {
 }
 
 /**
+ * Standard audit actions for notification operations.
+ */
+export const NOTIFICATION_AUDIT_ACTIONS = {
+  CREATED: "NOTIFICATION_CREATED",
+  UPDATED: "NOTIFICATION_UPDATED",
+  READ: "NOTIFICATION_READ",
+  UNREAD: "NOTIFICATION_UNREAD",
+  DELETED: "NOTIFICATION_DELETED",
+  MARK_ALL_READ: "NOTIFICATION_MARK_ALL_READ",
+} as const;
+
+export type NotificationAuditAction =
+  (typeof NOTIFICATION_AUDIT_ACTIONS)[keyof typeof NOTIFICATION_AUDIT_ACTIONS];
+
+export interface NotificationAuditMetadata {
+  [key: string]: unknown;
+  notificationId?: string;
+  title?: string;
+  type?: string;
+  severity?: string;
+  targetAdminId?: string | null;
+  targetAdminEmail?: string | null;
+  count?: number;
+  changedFields?: string[];
+}
+
+/**
  * Explicit safe allowlist metadata interfaces for event operations.
  * Strictly guarantees that no sensitive fields (RRNs, phone numbers,
  * auth tokens, secrets) are ever stored in audit metadata.
