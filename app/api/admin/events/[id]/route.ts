@@ -49,9 +49,11 @@ export async function GET(_req: NextRequest, context: RouteParams) {
 
     return NextResponse.json({ event });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch event";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[GET /api/admin/events/[id]] Failed to fetch event:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred." },
+      { status: 500 }
+    );
   }
 }
 
@@ -274,8 +276,10 @@ export async function PATCH(req: NextRequest, context: RouteParams) {
       );
     }
 
-    const message =
-      error instanceof Error ? error.message : "Failed to update event";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[PATCH /api/admin/events/[id]] Failed to update event:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred." },
+      { status: 500 }
+    );
   }
 }

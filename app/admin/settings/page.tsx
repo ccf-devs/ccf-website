@@ -6,6 +6,7 @@ import { AdminShell, AdminPageHeader } from "@/components/admin";
 import { SettingsView } from "@/components/admin/settings";
 import { prisma } from "@/lib/db/client";
 import { getRecruitmentSettings } from "@/lib/recruitment/service";
+import { getPublicContactSettings, type PublicContactSettings } from "@/lib/site-settings/service";
 
 export const dynamic = "force-dynamic";
 
@@ -27,9 +28,10 @@ export default async function AdminSettingsPage() {
   let recoveryCodesCount = 0;
   let recruitmentStatus: "Open" | "Closed" = "Closed";
   let whatsappGroupConfigured = false;
+  let contactSettings: PublicContactSettings | undefined;
 
   try {
-    const [totpRecord, codesCount, recruitmentSetting] = await Promise.all([
+    const [totpRecord, codesCount, recruitmentSetting, fetchedContactSettings] = await Promise.all([
       prisma.adminTotpSecret.findUnique({
         where: { adminId: admin.id },
         select: { verified: true, updatedAt: true },
@@ -38,6 +40,7 @@ export default async function AdminSettingsPage() {
         where: { adminId: admin.id },
       }),
       getRecruitmentSettings(),
+      getPublicContactSettings(),
     ]);
 
     isTotpEnabled = !!totpRecord?.verified;
@@ -45,6 +48,7 @@ export default async function AdminSettingsPage() {
     recoveryCodesCount = codesCount;
     recruitmentStatus = recruitmentSetting.isOpen ? "Open" : "Closed";
     whatsappGroupConfigured = !!recruitmentSetting.whatsappGroupUrl;
+    contactSettings = fetchedContactSettings;
   } catch (error) {
     console.error("[AdminSettingsPage] Error loading settings data:", error);
   }
@@ -66,7 +70,7 @@ export default async function AdminSettingsPage() {
       <AdminPageHeader
         eyebrow="System"
         title="Settings"
-        description="Configure your administrator authentication methods, two-factor authenticator, and view verified platform services."
+        description="Configure administrator authentication and platform settings."
       />
 
       <SettingsView
@@ -75,6 +79,7 @@ export default async function AdminSettingsPage() {
         initialTotpUpdatedAt={totpUpdatedAt}
         initialRecoveryCodesCount={recoveryCodesCount}
         platform={platform}
+        contactSettings={contactSettings}
       />
     </AdminShell>
   );

@@ -54,10 +54,8 @@ export default async function AdminEventsPage() {
       paymentMode: e.paymentMode,
     }));
   } catch (error) {
-    // Correction 4: Capture database errors explicitly so the UI
-    // renders an explicit error state and NEVER falsely pretends that 0 events exist.
-    dbError =
-      error instanceof Error ? error.message : "Database connection unavailable";
+    console.error("[AdminEventsPage] Failed to fetch events:", error);
+    dbError = "Database temporarily unavailable. Please try again.";
   }
 
   return (

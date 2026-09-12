@@ -411,4 +411,117 @@ describe("Admin Members API Integration Tests", () => {
       );
     });
   });
+
+  /* -------------------------------------------------------------------------- */
+  /* 5. Member Photo Media Association & Clearing                               */
+  /* -------------------------------------------------------------------------- */
+  describe("5. Member Photo Media Association", () => {
+    const validMediaId = "44444444-4444-4444-4444-444444444444";
+
+    it("associates member with an existing media record via photoMediaId", async () => {
+      vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(mockAdminUser);
+      vi.mocked(prisma.member.findUnique).mockResolvedValue({
+        id: memberId,
+        name: "Director John",
+        departmentId: activeDeptId,
+        photoMediaId: null,
+      } as any);
+      vi.mocked(prisma.media.findUnique).mockResolvedValue({
+        id: validMediaId,
+        objectKey: "members/john.webp",
+      } as any);
+      vi.mocked(prisma.member.update).mockResolvedValue({
+        id: memberId,
+        name: "Director John",
+        photoMediaId: validMediaId,
+        photo: {
+          id: validMediaId,
+          objectKey: "members/john.webp",
+          altText: "John photo",
+        },
+      } as any);
+
+      const res = await patchMember(
+        new NextRequest(`http://localhost/api/admin/members/${memberId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            photoMediaId: validMediaId,
+          }),
+        }),
+        { params: Promise.resolve({ id: memberId }) }
+      );
+
+      expect(res.status).toBe(200);
+      expect(prisma.member.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: memberId },
+          data: expect.objectContaining({
+            photo: { connect: { id: validMediaId } },
+          }),
+        })
+      );
+    });
+
+    it("clears member photo when photoMediaId is null", async () => {
+      vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(mockAdminUser);
+      vi.mocked(prisma.member.findUnique).mockResolvedValue({
+        id: memberId,
+        name: "Director John",
+        departmentId: activeDeptId,
+        photoMediaId: validMediaId,
+      } as any);
+      vi.mocked(prisma.member.update).mockResolvedValue({
+        id: memberId,
+        name: "Director John",
+        photoMediaId: null,
+        photo: null,
+      } as any);
+
+      const res = await patchMember(
+        new NextRequest(`http://localhost/api/admin/members/${memberId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            photoMediaId: null,
+          }),
+        }),
+        { params: Promise.resolve({ id: memberId }) }
+      );
+
+      expect(res.status).toBe(200);
+      expect(prisma.member.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: memberId },
+          data: expect.objectContaining({
+            photo: { disconnect: true },
+          }),
+        })
+      );
+    });
+
+    it("rejects non-existent photo media record with 400", async () => {
+      vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(mockAdminUser);
+      vi.mocked(prisma.member.findUnique).mockResolvedValue({
+        id: memberId,
+        name: "Director John",
+        departmentId: activeDeptId,
+        photoMediaId: null,
+      } as any);
+      vi.mocked(prisma.media.findUnique).mockResolvedValue(null);
+
+      const nonExistentMediaId = "55555555-5555-5555-5555-555555555555";
+      const res = await patchMember(
+        new NextRequest(`http://localhost/api/admin/members/${memberId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            photoMediaId: nonExistentMediaId,
+          }),
+        }),
+        { params: Promise.resolve({ id: memberId }) }
+      );
+
+      expect(res.status).toBe(400);
+      const data = await res.json();
+      expect(data.error).toBe("The selected photo media asset does not exist.");
+    });
+  });
 });

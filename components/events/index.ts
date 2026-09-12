@@ -7,4 +7,5 @@ export { EventDetailHero } from "./event-detail-hero";
 export { EventDetails } from "./event-details";
 export { EventContent } from "./event-content";
 export { EventGallery } from "./event-gallery";
+export { EventRegistrationCta } from "./event-registration-cta";
 export { EventDetailCta } from "./event-detail-cta";

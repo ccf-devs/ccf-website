@@ -302,11 +302,10 @@ describe("Phase 14 — Admin Settings & Security UI Unit Tests", () => {
       expect(html).toContain("test");
       expect(html).toContain("https://ccf-crescent.com");
 
-      // Connected Services
-      expect(html).toContain("PostgreSQL on Neon (Singapore)");
-      expect(html).toContain("Backblaze B2 (CA East)");
-      expect(html).toContain("Resend Transactional API");
-      expect(html).toContain("Auth.js + Resend Magic Link");
+      // Developer infrastructure diagnostics removed from UI
+      expect(html).not.toContain("PostgreSQL on Neon");
+      expect(html).not.toContain("Backblaze B2");
+      expect(html).not.toContain("Resend Transactional API");
     });
 
     it("renders recruitment intake status and link to recruitment console", () => {

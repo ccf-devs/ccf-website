@@ -10,6 +10,7 @@ interface AdminHeaderProps {
   onOpenMobileNav: () => void;
   isMobileNavOpen?: boolean;
   className?: string;
+  onOpenLogout?: () => void;
 }
 
 export function AdminHeader({
@@ -17,6 +18,7 @@ export function AdminHeader({
   onOpenMobileNav,
   isMobileNavOpen = false,
   className = "",
+  onOpenLogout,
 }: AdminHeaderProps) {
   return (
     <header
@@ -49,7 +51,7 @@ export function AdminHeader({
       </div>
 
       <div className="flex items-center gap-3">
-        <AdminUserMenu user={user} compact />
+        <AdminUserMenu user={user} compact onOpenLogout={onOpenLogout} />
       </div>
     </header>
   );

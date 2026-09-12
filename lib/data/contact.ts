@@ -51,7 +51,7 @@ export const CONTACT_HERO: ContactHeroData = {
   eyebrow: CCF_EYEBROW,
   title: "Let’s Connect",
   subtitle:
-    "Connect with Crescent Club of Finance. Reach out via our official email or follow our verified social channels.",
+    "Reach us through our official email or follow our social channels.",
 };
 
 export const CONTACT_CHANNELS: readonly ContactChannel[] = [
@@ -81,20 +81,70 @@ export const CONTACT_CHANNELS: readonly ContactChannel[] = [
     isExternal: true,
     iconName: "Linkedin",
   },
-  {
-    id: "channel-location",
-    label: "Campus Location",
-    value: CCF_PUBLIC_INFO.campus,
-    description: CCF_PUBLIC_INFO.affiliation,
-    iconName: "MapPin",
-  },
 ] as const;
+
+export function getContactChannels(settings?: {
+  contactEmail?: string;
+  supportEmail?: string;
+  socialInstagram?: string;
+  socialLinkedin?: string;
+}): readonly ContactChannel[] {
+  const email = settings?.contactEmail || CCF_PUBLIC_INFO.email;
+  const supportEmail = settings?.supportEmail;
+  const instagram = settings?.socialInstagram || CCF_PUBLIC_INFO.socials.instagram;
+  const linkedin = settings?.socialLinkedin || CCF_PUBLIC_INFO.socials.linkedin;
+
+  const channels: ContactChannel[] = [
+    {
+      id: "channel-email",
+      label: "Official Email",
+      value: email,
+      href: `mailto:${email}`,
+      description: "Official email channel for contacting Crescent Club of Finance.",
+      iconName: "Mail",
+    },
+  ];
+
+  if (supportEmail) {
+    channels.push({
+      id: "channel-support-email",
+      label: "Technical Support",
+      value: supportEmail,
+      href: `mailto:${supportEmail}`,
+      description: "Having trouble with the website? Contact our technical support team.",
+      iconName: "Mail",
+    });
+  }
+
+  channels.push(
+    {
+      id: "channel-instagram",
+      label: "Instagram",
+      value: "@crescentcluboffinance",
+      href: instagram,
+      description: "Official Instagram channel of Crescent Club of Finance.",
+      isExternal: true,
+      iconName: "Instagram",
+    },
+    {
+      id: "channel-linkedin",
+      label: "LinkedIn",
+      value: "Crescent Club of Finance",
+      href: linkedin,
+      description: "Official LinkedIn channel of Crescent Club of Finance.",
+      isExternal: true,
+      iconName: "Linkedin",
+    }
+  );
+
+  return channels;
+}
 
 export const CONTACT_SOCIAL: ContactSocialData = {
   eyebrow: CCF_EYEBROW,
   heading: "Official Social Channels",
   description:
-    "Follow Crescent Club of Finance across our confirmed social presences for event notices and announcements.",
+    "Follow our official pages for event updates and announcements.",
 };
 
 export const CRESCENT_CAMPUS_COORDINATES = {
@@ -120,7 +170,7 @@ export const CONTACT_CTA: ContactCtaData = {
   eyebrow: CCF_EYEBROW,
   heading: "Have a Question or Looking to Connect?",
   description:
-    "Send an email to our official address or discover membership opportunities with Crescent Club of Finance.",
+    "Send us an email or explore membership opportunities.",
   primaryActionLabel: "Send an Email",
   primaryActionHref: `mailto:${CCF_PUBLIC_INFO.email}`,
   secondaryActionLabel: "Explore Membership",

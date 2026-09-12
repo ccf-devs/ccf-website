@@ -56,9 +56,11 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ events });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch events";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[GET /api/admin/events] Failed to fetch events:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred." },
+      { status: 500 }
+    );
   }
 }
 
@@ -172,8 +174,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const message =
-      error instanceof Error ? error.message : "Failed to create event";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("[POST /api/admin/events] Failed to create event:", error);
+    return NextResponse.json(
+      { error: "An internal server error occurred." },
+      { status: 500 }
+    );
   }
 }

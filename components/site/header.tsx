@@ -9,8 +9,13 @@ import { Container } from "./container";
 import { MobileNav } from "./mobile-nav";
 import { PUBLIC_NAV_ITEMS, CCF_PUBLIC_INFO } from "./navigation-data";
 import { cn } from "@/lib/utils";
+import type { PublicContactSettings } from "@/lib/site-settings/service";
 
-export function Header() {
+interface HeaderProps {
+  contactSettings?: PublicContactSettings;
+}
+
+export function Header({ contactSettings }: HeaderProps = {}) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -117,6 +122,7 @@ export function Header() {
         onClose={() => setMobileMenuOpen(false)}
         items={PUBLIC_NAV_ITEMS}
         pathname={pathname}
+        contactSettings={contactSettings}
       />
     </header>
   );

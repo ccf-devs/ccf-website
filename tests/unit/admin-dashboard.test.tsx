@@ -312,8 +312,8 @@ describe("Admin Dashboard Foundation Verification (Phase 5 Task 8)", () => {
     });
   });
 
-  describe("4. Admin Dashboard Landing Page Verified Content (Phase 5 Task 8 Corrections)", () => {
-    it("renders corrected module count label, platform architecture status card, and access scope", async () => {
+  describe("4. Admin Dashboard Landing Page Verified Content (Pre-Phase 14 Cleanup)", () => {
+    it("renders corrected module count label and omits technical engineering architecture cards", async () => {
       const mockAdmin = {
         id: "admin-uuid-1",
         name: "Test Admin",
@@ -330,21 +330,11 @@ describe("Admin Dashboard Foundation Verification (Phase 5 Task 8)", () => {
       expect(html).toContain("5 Core Modules");
       expect(html).not.toContain("5 Core Sections");
 
-      // 2. Platform Architecture card title & description correction
-      expect(html).toContain("Platform Architecture");
+      // 2. Technical architecture and operational status cards removed per operational cleanup
       expect(html).not.toContain("Platform &amp; Operational Status");
       expect(html).not.toContain("Platform & Operational Status");
-      expect(html).toContain(
-        "Core technical components powering the CCF administration platform."
-      );
-      expect(html).not.toContain(
-        "Active architectural components for Crescent Club of Finance."
-      );
-
-      // 3. Admin Access label correction
-      expect(html).toContain("Full Admin Access (MVP)");
-      expect(html).not.toContain("Full Operational Permissions (MVP)");
-      expect(html).not.toContain("Full Operational Permissions");
+      expect(html).not.toContain("Platform Architecture");
+      expect(html).not.toContain("Operational Systems Status");
     });
   });
 });

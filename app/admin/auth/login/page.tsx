@@ -106,7 +106,7 @@ function LoginForm() {
             href="/admin/auth/totp"
             className="font-medium text-slate-700 hover:text-slate-900 underline"
           >
-            Use Authenticator Code (TOTP Fallback)
+            Sign in with Authenticator App
           </Link>
         </div>
         <div>
@@ -114,7 +114,7 @@ function LoginForm() {
             href="/admin/auth/recovery"
             className="font-medium text-slate-500 hover:text-slate-700 underline text-xs"
           >
-            Use One-Time Recovery Code (Break-Glass)
+            Use Recovery Code
           </Link>
         </div>
       </div>

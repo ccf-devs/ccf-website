@@ -5,6 +5,7 @@ import { AdminRole } from "@prisma/client";
 import { Shield, Server } from "lucide-react";
 import { SecuritySettings } from "./security-settings";
 import { GeneralSettings, PlatformMetadata } from "./general-settings";
+import type { PublicContactSettings } from "@/lib/site-settings/service";
 
 export interface SettingsViewProps {
   admin: {
@@ -17,6 +18,7 @@ export interface SettingsViewProps {
   initialTotpUpdatedAt: string | null;
   initialRecoveryCodesCount: number;
   platform: PlatformMetadata;
+  contactSettings?: PublicContactSettings;
 }
 
 export function SettingsView({
@@ -25,6 +27,7 @@ export function SettingsView({
   initialTotpUpdatedAt,
   initialRecoveryCodesCount,
   platform,
+  contactSettings,
 }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<"security" | "platform">("security");
 
@@ -75,7 +78,7 @@ export function SettingsView({
 
       {activeTab === "platform" && (
         <div role="tabpanel" aria-label="Platform Overview">
-          <GeneralSettings platform={platform} />
+          <GeneralSettings platform={platform} contactSettings={contactSettings} />
         </div>
       )}
     </div>

@@ -176,7 +176,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (validated.socialUrl !== undefined) dataToUpdate.socialUrl = validated.socialUrl;
     if (validated.photoMediaId !== undefined) {
       if (validated.photoMediaId === null) {
-        dataToUpdate.photo = { disconnect: true };
+        if (existing.photoMediaId !== null) {
+          dataToUpdate.photo = { disconnect: true };
+        }
       } else {
         dataToUpdate.photo = { connect: { id: validated.photoMediaId } };
       }

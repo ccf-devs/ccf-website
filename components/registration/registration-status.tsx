@@ -13,7 +13,8 @@ export type RegistrationStatusReason =
   | "EXTERNAL_MODE"
   | "NOT_INTERNAL"
   | "NOT_ELIGIBLE"
-  | "UNAVAILABLE";
+  | "UNAVAILABLE"
+  | "NO_FORM";
 
 interface RegistrationStatusNoticeProps {
   reason: RegistrationStatusReason;
@@ -34,6 +35,14 @@ export function RegistrationStatusNotice({
 }: RegistrationStatusNoticeProps) {
   const getStatusConfig = () => {
     switch (reason) {
+      case "NO_FORM":
+        return {
+          icon: Clock,
+          iconColor: "text-amber-400 bg-amber-400/10 border-amber-400/30",
+          tag: "REGISTRATION OPENS SOON",
+          title: "Registration Opens Soon",
+          description: `The registration form for ${eventName} is being finalized. Please check back later.`,
+        };
       case "NOT_OPEN_YET":
         return {
           icon: Clock,
@@ -75,6 +84,14 @@ export function RegistrationStatusNotice({
           tag: "EXTERNAL REGISTRATION",
           title: "External Registration Required",
           description: `${eventName} uses an external platform for registration. Please use the official external link to register.`,
+        };
+      case "NOT_INTERNAL":
+        return {
+          icon: AlertCircle,
+          iconColor: "text-amber-400 bg-amber-400/10 border-amber-400/30",
+          tag: "EXTERNAL REGISTRATION",
+          title: "Registration Not Handled Here",
+          description: `Registration for ${eventName} is handled through an external channel. Please follow the event organizer's instructions.`,
         };
       case "NOT_ELIGIBLE":
         return {

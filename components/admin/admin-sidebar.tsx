@@ -38,12 +38,14 @@ interface AdminSidebarProps {
   user?: AdminUserProps | null;
   className?: string;
   onNavigate?: () => void;
+  onOpenLogout?: () => void;
 }
 
 export function AdminSidebar({
   user,
   className = "",
   onNavigate,
+  onOpenLogout,
 }: AdminSidebarProps) {
   const pathname = usePathname() || "";
   const role = user?.role as AdminRole | undefined;
@@ -119,7 +121,7 @@ export function AdminSidebar({
 
       {/* User Information & Sign Out */}
       <div className="p-4 border-t border-border/40">
-        <AdminUserMenu user={user} />
+        <AdminUserMenu user={user} onOpenLogout={onOpenLogout} />
       </div>
     </aside>
   );

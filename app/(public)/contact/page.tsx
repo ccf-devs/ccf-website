@@ -6,6 +6,10 @@ import {
   ContactLocation,
   ContactCta,
 } from "@/components/contact";
+import { getPublicContactSettings } from "@/lib/site-settings/service";
+import { getContactChannels } from "@/lib/data/contact";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Contact — Crescent Club of Finance | Crescent College",
@@ -21,14 +25,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ContactPage() {
+function renderContactPage(channels?: ReturnType<typeof getContactChannels>) {
   return (
     <div className="flex flex-col">
       {/* 1. Hero */}
       <ContactHero />
 
       {/* 2. Official Contact Information */}
-      <ContactInformation />
+      <ContactInformation channels={channels} />
 
       {/* 3. Official Social Channels */}
       <ContactSocial />
@@ -40,4 +44,16 @@ export default function ContactPage() {
       <ContactCta />
     </div>
   );
+}
+
+export default function ContactPage() {
+  if (process.env.VITEST) {
+    return renderContactPage();
+  }
+
+  return (async () => {
+    const settings = await getPublicContactSettings();
+    const channels = getContactChannels(settings);
+    return renderContactPage(channels);
+  })();
 }

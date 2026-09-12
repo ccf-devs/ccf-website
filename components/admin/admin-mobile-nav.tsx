@@ -10,12 +10,14 @@ interface AdminMobileNavProps {
   isOpen: boolean;
   onClose: () => void;
   user?: AdminUserProps | null;
+  onOpenLogout?: () => void;
 }
 
 export function AdminMobileNav({
   isOpen,
   onClose,
   user,
+  onOpenLogout,
 }: AdminMobileNavProps) {
   // Close on Escape key press
   useEffect(() => {
@@ -67,7 +69,12 @@ export function AdminMobileNav({
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <AdminSidebar user={user} onNavigate={onClose} className="border-r-0 w-full" />
+          <AdminSidebar
+            user={user}
+            onNavigate={onClose}
+            onOpenLogout={onOpenLogout}
+            className="border-r-0 w-full"
+          />
         </div>
       </div>
     </div>

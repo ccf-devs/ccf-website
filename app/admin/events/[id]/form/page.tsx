@@ -2,13 +2,10 @@ import { Metadata } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { AdminShell } from "@/components/admin";
+import { AdminShell, DashboardErrorState } from "@/components/admin";
 import { FormBuilder } from "@/components/admin/forms";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { prisma } from "@/lib/db/client";
-import { AlertCircle, ArrowLeft, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { RegistrationMode } from "@prisma/client";
 
 interface PageProps {
@@ -94,19 +91,12 @@ export default async function AdminEventFormPage({ params }: PageProps) {
     <AdminShell user={session.user}>
       <div className="space-y-6">
         {errorMessage ? (
-          <Card className="border-red-500/30 bg-red-950/20 p-6 space-y-4">
-            <div className="flex items-center gap-2.5 text-red-400">
-              <AlertCircle className="h-5 w-5" />
-              <h3 className="font-semibold text-sm">Error Loading Event Form</h3>
-            </div>
-            <p className="text-xs text-ccf-muted">{errorMessage}</p>
-            <Button asChild variant="outline" size="sm" className="border-border">
-              <Link href="/admin/events">
-                <ArrowLeft className="h-4 w-4 mr-1.5" />
-                Back to Events
-              </Link>
-            </Button>
-          </Card>
+          <DashboardErrorState
+            error={errorMessage}
+            retryUrl={`/admin/events/${id}/form`}
+            backUrl="/admin/events"
+            backLabel="Return to Events"
+          />
         ) : (
           <>
             {event.registrationMode === RegistrationMode.EXTERNAL && (

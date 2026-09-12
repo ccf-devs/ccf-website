@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import { getCurrentAdmin } from "@/lib/auth/session";
 import { AdminRole } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { Shield, CheckCircle2, Server, Database, Lock } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Shield } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   AdminShell,
@@ -52,7 +52,7 @@ export default async function AdminDashboardPage() {
       <AdminPageHeader
         eyebrow="Overview"
         title="Dashboard"
-        description="Central administrative overview and operational health for Crescent Club of Finance."
+        description="Administrative overview for Crescent Club of Finance."
       >
         <Badge
           variant="outline"
@@ -155,77 +155,11 @@ export default async function AdminDashboardPage() {
           />
           <AdminModuleCard
             title="Media"
-            description="Manage photo gallery assets and production media delivery."
+            description="Manage event photos and media uploads."
             href="/admin/media"
             iconName="Image"
           />
         </div>
-      </div>
-
-      {/* 6. Platform Architecture Status */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <Card className="lg:col-span-6 bg-ccf-surface border-border/60 p-6 flex flex-col justify-between space-y-4 shadow-sm">
-          <CardHeader className="p-0 space-y-1">
-            <CardTitle className="text-base font-semibold text-ccf-offwhite flex items-center gap-2">
-              <Server className="h-4 w-4 text-ccf-gold" aria-hidden="true" />
-              <span>Platform Architecture</span>
-            </CardTitle>
-            <CardDescription className="text-xs text-ccf-muted">
-              Core technical components powering the CCF administration platform.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="p-0 space-y-3 pt-2">
-            <div className="flex items-center justify-between py-2 border-b border-border/40 text-xs">
-              <span className="text-ccf-muted">Platform Architecture</span>
-              <span className="font-semibold text-ccf-offwhite">Next.js 16 + React 19</span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-border/40 text-xs">
-              <span className="text-ccf-muted">Authentication Engine</span>
-              <span className="font-semibold text-ccf-offwhite inline-flex items-center gap-1.5">
-                <Lock className="h-3 w-3 text-emerald-400" aria-hidden="true" />
-                <span>Auth.js (Magic Link + TOTP)</span>
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-2 border-b border-border/40 text-xs">
-              <span className="text-ccf-muted">Database Layer</span>
-              <span className="font-semibold text-ccf-offwhite inline-flex items-center gap-1.5">
-                <Database className="h-3 w-3 text-ccf-gold" aria-hidden="true" />
-                <span>PostgreSQL + Prisma ORM</span>
-              </span>
-            </div>
-            <div className="flex items-center justify-between pt-1 text-xs">
-              <span className="text-ccf-muted">Access Scope</span>
-              <span className="font-semibold text-emerald-400 inline-flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Full Admin Access (MVP)</span>
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-6 bg-ccf-surface border-border/60 p-6 flex flex-col justify-between space-y-4 shadow-sm">
-          <CardHeader className="p-0 space-y-1">
-            <CardTitle className="text-base font-semibold text-ccf-offwhite flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-ccf-gold" aria-hidden="true" />
-              <span>Operational Systems Status</span>
-            </CardTitle>
-            <CardDescription className="text-xs text-ccf-muted">
-              Live status across completed CCF operational subsystems.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="p-0 space-y-3 pt-2">
-            <div className="rounded-lg border border-border/60 bg-ccf-surface-sunken p-4 space-y-2 text-xs">
-              <p className="font-semibold text-ccf-offwhite">
-                Live Subsystems Verified
-              </p>
-              <p className="text-ccf-muted leading-relaxed">
-                Events, Dynamic Form Engine, Individual and Team Registrations, Manual UPI Payment Tracking, and Student Recruitment are fully connected to transactional PostgreSQL workflows with audit logging.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </AdminShell>
   );

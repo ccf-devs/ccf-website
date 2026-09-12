@@ -12,9 +12,6 @@ export function ContactLocation() {
       <Container className="space-y-8">
         <FadeIn>
           <div className="space-y-2 text-center max-w-2xl mx-auto">
-            <div>
-              <span className="editorial-tag">CAMPUS LIAISON // VANDALUR PRESENCE</span>
-            </div>
             <span className="type-eyebrow text-ccf-gold">
               {CONTACT_LOCATION.eyebrow}
             </span>

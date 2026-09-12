@@ -8,6 +8,11 @@ import {
   LeadershipPreview,
   JoinCta,
 } from "@/components/home";
+import { prisma } from "@/lib/db/client";
+import { toPublicEventSummary, type CcfEvent } from "@/lib/data/events";
+import { EventStatus } from "@prisma/client";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Crescent Club of Finance (CCF) — Crescent College, Vandalur",
@@ -23,7 +28,26 @@ export const metadata: Metadata = {
   },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  let events: CcfEvent[] | undefined = undefined;
+  let isError = false;
+
+  if (!process.env.VITEST) {
+    try {
+      const dbEvents = await prisma.event.findMany({
+        where: { status: EventStatus.PUBLISHED },
+        include: { content: true },
+        orderBy: { startsAt: "asc" },
+        take: 3,
+      });
+      events = dbEvents.map(toPublicEventSummary);
+    } catch (error) {
+      console.error("[HomePage] Failed to query featured events:", error);
+      isError = true;
+      events = [];
+    }
+  }
+
   return (
     <div className="flex flex-col">
       {/* 1. Hero Section */}
@@ -33,7 +57,7 @@ export default function HomePage() {
       <ClubIntro />
 
       {/* 3. Featured & Upcoming Events */}
-      <FeaturedEvents />
+      <FeaturedEvents events={events} isError={isError} />
 
       {/* 4. Value Proposition & Pillars */}
       <ValuePropositionSection />

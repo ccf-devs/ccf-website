@@ -4,9 +4,18 @@ import { CcfLogo } from "./logo";
 import { Mail, ExternalLink } from "lucide-react";
 import { Container } from "./container";
 import { PUBLIC_NAV_ITEMS, CCF_PUBLIC_INFO } from "./navigation-data";
+import type { PublicContactSettings } from "@/lib/site-settings/service";
 
-export function Footer() {
+interface FooterProps {
+  contactSettings?: PublicContactSettings;
+}
+
+export function Footer({ contactSettings }: FooterProps = {}) {
   const currentYear = new Date().getFullYear();
+  const email = contactSettings?.contactEmail || CCF_PUBLIC_INFO.email;
+  const supportEmail = contactSettings?.supportEmail;
+  const instagram = contactSettings?.socialInstagram || CCF_PUBLIC_INFO.socials.instagram;
+  const linkedin = contactSettings?.socialLinkedin || CCF_PUBLIC_INFO.socials.linkedin;
 
   return (
     <footer className="border-t border-border/40 bg-ccf-navy-deep text-ccf-muted">
@@ -29,7 +38,7 @@ export function Footer() {
             </Link>
 
             <p className="max-w-md text-sm leading-relaxed text-ccf-muted">
-              The premier finance club of {CCF_PUBLIC_INFO.affiliation}, dedicated to financial literacy, market acumen, and career excellence.
+              The student finance organization of {CCF_PUBLIC_INFO.affiliation}, committed to financial education and professional development.
             </p>
 
             <p className="text-xs text-slate-400">
@@ -63,13 +72,24 @@ export function Footer() {
             </h3>
             <div className="space-y-3 text-sm">
               <a
-                href={`mailto:${CCF_PUBLIC_INFO.email}`}
+                href={`mailto:${email}`}
                 className="group flex items-start gap-2.5 transition-colors hover:text-ccf-offwhite focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
-                aria-label={`Email CCF at ${CCF_PUBLIC_INFO.email}`}
+                aria-label={`Email CCF at ${email}`}
               >
                 <Mail className="h-4 w-4 shrink-0 text-ccf-gold mt-0.5" aria-hidden="true" />
-                <span className="text-xs xl:text-sm break-words">{CCF_PUBLIC_INFO.email}</span>
+                <span className="text-xs xl:text-sm break-words">{email}</span>
               </a>
+
+              {supportEmail && supportEmail !== email && (
+                <a
+                  href={`mailto:${supportEmail}`}
+                  className="group flex items-start gap-2.5 transition-colors hover:text-ccf-offwhite focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
+                  aria-label={`Technical support email: ${supportEmail}`}
+                >
+                  <Mail className="h-4 w-4 shrink-0 text-ccf-gold mt-0.5" aria-hidden="true" />
+                  <span className="text-xs xl:text-sm break-words">{supportEmail}</span>
+                </a>
+              )}
 
               <div className="pt-2">
                 <h4 className="type-metadata text-slate-400 mb-2 text-[10px]">
@@ -77,7 +97,7 @@ export function Footer() {
                 </h4>
                 <div className="flex flex-col space-y-2">
                   <a
-                    href={CCF_PUBLIC_INFO.socials.instagram}
+                    href={instagram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs text-ccf-muted hover:text-ccf-gold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
@@ -88,7 +108,7 @@ export function Footer() {
                   </a>
 
                   <a
-                    href={CCF_PUBLIC_INFO.socials.linkedin}
+                    href={linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs text-ccf-muted hover:text-ccf-gold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"

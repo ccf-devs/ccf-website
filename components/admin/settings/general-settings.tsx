@@ -1,130 +1,210 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Server,
-  Database,
-  HardDrive,
-  Mail,
-  Globe,
   UserPlus,
   ArrowRight,
+  Mail,
+  Share2,
   CheckCircle2,
-  Lock,
+  AlertCircle,
+  Loader2,
+  Server,
+  Globe,
 } from "lucide-react";
+import type { PublicContactSettings } from "@/lib/site-settings/service";
 
 export interface PlatformMetadata {
   appName: string;
-  appVersion: string;
+  appVersion?: string;
   appUrl: string;
   environment: string;
-  databaseEngine: string;
-  storageProvider: string;
-  emailProvider: string;
+  databaseEngine?: string;
+  storageProvider?: string;
+  emailProvider?: string;
   recruitmentStatus: "Open" | "Closed";
   whatsappGroupConfigured: boolean;
 }
 
 export interface GeneralSettingsProps {
   platform: PlatformMetadata;
+  contactSettings?: PublicContactSettings;
 }
 
-export function GeneralSettings({ platform }: GeneralSettingsProps) {
+export function GeneralSettings({ platform, contactSettings }: GeneralSettingsProps) {
+  const [contactEmail, setContactEmail] = useState(contactSettings?.contactEmail || "");
+  const [supportEmail, setSupportEmail] = useState(contactSettings?.supportEmail || "");
+  const [socialInstagram, setSocialInstagram] = useState(contactSettings?.socialInstagram || "");
+  const [socialLinkedin, setSocialLinkedin] = useState(contactSettings?.socialLinkedin || "");
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(
+    null
+  );
+
+  const handleSaveContactSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setFeedback(null);
+
+    try {
+      const updates = [
+        { key: "contact_email", value: contactEmail.trim() },
+        { key: "support_email", value: supportEmail.trim() },
+        { key: "social_instagram", value: socialInstagram.trim() },
+        { key: "social_linkedin", value: socialLinkedin.trim() },
+      ];
+
+      for (const update of updates) {
+        const res = await fetch("/api/admin/site-settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(update),
+        });
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Failed to update ${update.key}`);
+        }
+      }
+
+      setFeedback({
+        type: "success",
+        message: "Contact settings saved successfully.",
+      });
+    } catch (err) {
+      setFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to save settings.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
-      {/* 1. Platform Infrastructure Information */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="bg-ccf-surface border-border/60 shadow-sm">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-base font-semibold text-ccf-offwhite flex items-center gap-2">
-              <Server className="h-4 w-4 text-ccf-gold" aria-hidden="true" />
-              <span>Platform Core Specifications</span>
-            </CardTitle>
-            <CardDescription className="text-xs text-ccf-muted">
-              Authoritative technical parameters powering this instance.
-            </CardDescription>
-          </CardHeader>
+      {/* Site Contact & Social Configuration */}
+      <Card className="bg-ccf-surface border-border/60 shadow-sm">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border/60 bg-ccf-surface-elevated text-ccf-gold">
+              <Mail className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold text-ccf-offwhite">
+                Site Contact & Social Information
+              </CardTitle>
+              <CardDescription className="text-xs text-ccf-muted">
+                Official contact channels and social media profiles displayed across public pages.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
 
-          <CardContent className="p-0">
-            <div className="divide-y divide-border/40 text-xs">
-              <div className="flex items-center justify-between p-4">
-                <span className="text-ccf-muted">Application Name</span>
-                <span className="font-semibold text-ccf-offwhite">{platform.appName}</span>
+        <CardContent>
+          <form onSubmit={handleSaveContactSettings} className="space-y-4">
+            {feedback && (
+              <div
+                className={`p-3 rounded-md flex items-center gap-2 text-xs ${
+                  feedback.type === "success"
+                    ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                    : "bg-red-500/10 border border-red-500/30 text-red-400"
+                }`}
+              >
+                {feedback.type === "success" ? (
+                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                )}
+                <span>{feedback.message}</span>
               </div>
-              <div className="flex items-center justify-between p-4">
-                <span className="text-ccf-muted">Platform Build</span>
-                <span className="font-mono text-ccf-offwhite bg-ccf-surface-sunken px-2 py-0.5 rounded border border-border/60">
-                  {platform.appVersion}
-                </span>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="contact-email" className="text-xs text-ccf-muted">
+                  Official Public Email
+                </Label>
+                <Input
+                  id="contact-email"
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="e.g. crescentcluboffinance26@gmail.com"
+                  required
+                  className="text-xs"
+                />
               </div>
-              <div className="flex items-center justify-between p-4">
-                <span className="text-ccf-muted">Runtime Environment</span>
-                <span className="font-mono uppercase text-emerald-400 font-bold tracking-wider text-[11px]">
-                  {platform.environment}
-                </span>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="support-email" className="text-xs text-ccf-muted">
+                  Technical Support Email
+                </Label>
+                <Input
+                  id="support-email"
+                  type="email"
+                  value={supportEmail}
+                  onChange={(e) => setSupportEmail(e.target.value)}
+                  placeholder="e.g. support.ccf@gmail.com"
+                  required
+                  className="text-xs"
+                />
               </div>
-              <div className="flex items-center justify-between p-4">
-                <span className="text-ccf-muted">Canonical Host</span>
-                <span className="font-mono text-ccf-offwhite flex items-center gap-1.5">
-                  <Globe className="h-3.5 w-3.5 text-ccf-gold" />
-                  {platform.appUrl}
-                </span>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="social-instagram" className="text-xs text-ccf-muted">
+                  Instagram Profile URL
+                </Label>
+                <Input
+                  id="social-instagram"
+                  type="url"
+                  value={socialInstagram}
+                  onChange={(e) => setSocialInstagram(e.target.value)}
+                  placeholder="https://www.instagram.com/..."
+                  required
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="social-linkedin" className="text-xs text-ccf-muted">
+                  LinkedIn Page URL
+                </Label>
+                <Input
+                  id="social-linkedin"
+                  type="url"
+                  value={socialLinkedin}
+                  onChange={(e) => setSocialLinkedin(e.target.value)}
+                  placeholder="https://www.linkedin.com/company/..."
+                  required
+                  className="text-xs"
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="bg-ccf-surface border-border/60 shadow-sm">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-base font-semibold text-ccf-offwhite flex items-center gap-2">
-              <Database className="h-4 w-4 text-ccf-gold" aria-hidden="true" />
-              <span>Production Infrastructure</span>
-            </CardTitle>
-            <CardDescription className="text-xs text-ccf-muted">
-              Configured services used by the CCF platform.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div className="divide-y divide-border/40 text-xs">
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-2">
-                  <Database className="h-3.5 w-3.5 text-ccf-muted" />
-                  <span className="text-ccf-muted">Database Engine</span>
-                </div>
-                <span className="font-semibold text-ccf-offwhite">{platform.databaseEngine}</span>
-              </div>
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-2">
-                  <HardDrive className="h-3.5 w-3.5 text-ccf-muted" />
-                  <span className="text-ccf-muted">Object Storage</span>
-                </div>
-                <span className="font-semibold text-ccf-offwhite">{platform.storageProvider}</span>
-              </div>
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-2">
-                  <Mail className="h-3.5 w-3.5 text-ccf-muted" />
-                  <span className="text-ccf-muted">Email Gateway</span>
-                </div>
-                <span className="font-semibold text-ccf-offwhite">{platform.emailProvider}</span>
-              </div>
-              <div className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-2">
-                  <Lock className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-ccf-muted">Security Layer</span>
-                </div>
-                <span className="font-semibold text-emerald-400">Auth.js + Resend Magic Link</span>
-              </div>
+            <div className="pt-2 flex justify-end">
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSaving}
+                className="bg-ccf-gold text-ccf-navy hover:bg-ccf-gold-light font-semibold text-xs"
+              >
+                {isSaving && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                <span>Save Contact Settings</span>
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </form>
+        </CardContent>
+      </Card>
 
-      {/* 2. Recruitment Intake Subsystem Settings */}
+      {/* Recruitment Intake Subsystem Settings */}
       <Card className="bg-ccf-surface border-border/60 shadow-sm">
         <CardHeader className="space-y-1">
           <div className="flex items-center justify-between">
@@ -178,6 +258,48 @@ export function GeneralSettings({ platform }: GeneralSettingsProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Platform Core Specifications */}
+      <Card className="bg-ccf-surface border-border/60 shadow-sm">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-base font-semibold text-ccf-offwhite flex items-center gap-2">
+            <Server className="h-4 w-4 text-ccf-gold" aria-hidden="true" />
+            <span>Platform Core Specifications</span>
+          </CardTitle>
+          <CardDescription className="text-xs text-ccf-muted">
+            Current environment runtime and application identities.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="divide-y divide-border/40 text-xs">
+            <div className="flex items-center justify-between p-4">
+              <span className="text-ccf-muted">Application Identity</span>
+              <span className="font-semibold text-ccf-offwhite">{platform.appName}</span>
+            </div>
+            <div className="flex items-center justify-between p-4">
+              <span className="text-ccf-muted">Application Release</span>
+              <span className="font-mono text-ccf-gold font-medium">
+                {platform.appVersion || "v0.1.0"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-4">
+              <span className="text-ccf-muted">Runtime Environment</span>
+              <span className="font-mono uppercase text-emerald-400 font-bold tracking-wider text-[11px]">
+                {platform.environment}
+              </span>
+            </div>
+            <div className="flex items-center justify-between p-4">
+              <span className="text-ccf-muted">Canonical Host</span>
+              <span className="font-mono text-ccf-offwhite flex items-center gap-1.5">
+                <Globe className="h-3.5 w-3.5 text-ccf-gold" />
+                {platform.appUrl}
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+

@@ -9,11 +9,19 @@ import { type CcfEvent } from "@/lib/data/events";
 
 interface EventDetailHeroProps {
   event: CcfEvent;
+  coverImageUrl?: string | null;
 }
 
-export function EventDetailHero({ event }: EventDetailHeroProps) {
+export function EventDetailHero({ event, coverImageUrl }: EventDetailHeroProps) {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-ccf-navy-dark via-ccf-navy to-ccf-navy py-14 md:py-20 border-b border-border/40">
+      {coverImageUrl && (
+        <div
+          className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-15"
+          style={{ backgroundImage: `url(${coverImageUrl})` }}
+          aria-hidden="true"
+        />
+      )}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03]"
         style={{

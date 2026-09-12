@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Sparkles,
   Save,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,15 +253,24 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
         return;
       }
 
+      const targetId = data.event?.id || eventId;
+      const isBuiltInCreate =
+        mode === "create" && registrationMethod === RegistrationMethod.BUILT_IN;
+
       setSuccessMessage(
-        mode === "create"
+        isBuiltInCreate
+          ? "Event created! Redirecting to Form Engine to configure custom fields..."
+          : mode === "create"
           ? "Event created successfully! Redirecting to event details..."
           : "Event updated successfully! Redirecting to event details..."
       );
 
-      const targetId = data.event?.id || eventId;
       setTimeout(() => {
-        router.push(`/admin/events/${targetId}`);
+        if (isBuiltInCreate && targetId) {
+          router.push(`/admin/events/${targetId}/form`);
+        } else {
+          router.push(`/admin/events/${targetId}`);
+        }
         router.refresh();
       }, 1000);
     } catch {
@@ -401,6 +411,7 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
               type="datetime-local"
               required
               value={startsAt}
+              min={mode === "create" ? formatDateForInput(new Date()) : undefined}
               onChange={(e) => setStartsAt(e.target.value)}
               aria-invalid={!!errors.startsAt}
             />
@@ -512,6 +523,28 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
             </Select>
             {errors.registrationMethod && (
               <p className="text-xs text-red-400 mt-1">{errors.registrationMethod}</p>
+            )}
+
+            {registrationMethod === RegistrationMethod.BUILT_IN && (
+              <div className="mt-2 rounded-lg border border-ccf-gold/30 bg-ccf-gold/5 p-3 text-xs text-ccf-muted flex items-start gap-2.5">
+                <Info className="h-4 w-4 text-ccf-gold shrink-0 mt-0.5" aria-hidden="true" />
+                <div className="space-y-0.5">
+                  <p className="font-semibold text-ccf-offwhite">CCF Form Engine Enabled</p>
+                  <p>
+                    {mode === "create"
+                      ? "Custom registration fields (text, select, radio, checkbox, etc.) can be configured immediately in the Form Engine upon creating this event."
+                      : "You can customize registration fields, validation rules, and publish form versions in the Form Engine."}
+                  </p>
+                  {mode === "edit" && eventId && (
+                    <Link
+                      href={`/admin/events/${eventId}/form`}
+                      className="inline-flex items-center gap-1 text-ccf-gold hover:underline font-medium pt-1"
+                    >
+                      <span>Open Form Engine &rarr;</span>
+                    </Link>
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

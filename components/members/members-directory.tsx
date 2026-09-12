@@ -12,29 +12,114 @@ import {
 } from "@/lib/data/members";
 import { MemberAvatar } from "./member-avatar";
 
-export function MembersDirectory() {
-  // Preserve order of appearance of departments from canonical spreadsheet,
-  // while ordering members within each department strictly by organizational hierarchy:
-  // Director -> Joint Director -> Executive Member -> Head of Subcommitee,
-  // and preserving displayOrder as secondary sort key for same-rank members.
-  const departmentGroups = React.useMemo(() => {
-    const groups: { department: string; members: (typeof CCF_MEMBERS)[number][] }[] = [];
-    const seen = new Set<string>();
+export interface DbMember {
+  id: string;
+  name: string;
+  position: string | null;
+  department: {
+    name: string;
+  };
+  photoMedia?: {
+    objectKey: string;
+  } | null;
+}
 
+interface MembersDirectoryProps {
+  members?: DbMember[];
+  isError?: boolean;
+}
+
+export function MembersDirectory({ members, isError }: MembersDirectoryProps = {}) {
+  if (isError) {
+    return (
+      <section id="directory" className="py-16 md:py-24 border-b border-border/30 bg-background">
+        <Container className="space-y-4 text-center py-12">
+          <p className="text-ccf-muted">Member information is temporarily unavailable. Please try again later.</p>
+        </Container>
+      </section>
+    );
+  }
+
+  if (members !== undefined && members.length === 0) {
+    return (
+      <section id="directory" className="py-16 md:py-24 border-b border-border/30 bg-background">
+        <Container className="space-y-4 text-center py-12">
+          <p className="text-ccf-muted">Member profiles will be published here.</p>
+        </Container>
+      </section>
+    );
+  }
+
+  let departmentGroups: {
+    department: string;
+    members: {
+      id: string;
+      name: string;
+      designation: string;
+      department: string;
+      initials: string;
+      photoObjectKey?: string;
+    }[];
+  }[] = [];
+
+  if (members !== undefined) {
+    const seen = new Set<string>();
+    for (const member of members) {
+      const deptName = member.department?.name || "General";
+      if (!seen.has(deptName)) {
+        seen.add(deptName);
+        const deptMembers = members.filter(
+          (m) => (m.department?.name || "General") === deptName
+        );
+        departmentGroups.push({
+          department: deptName,
+          members: deptMembers.map((m) => {
+            const initials = m.name
+              .split(" ")
+              .map((n) => n[0])
+              .filter(Boolean)
+              .slice(0, 2)
+              .join("")
+              .toUpperCase() || "M";
+            return {
+              id: m.id,
+              name: m.name,
+              designation: m.position || "Member",
+              department: deptName,
+              initials,
+              photoObjectKey: m.photoMedia?.objectKey,
+            };
+          }),
+        });
+      }
+    }
+  } else {
+    const seen = new Set<string>();
     for (const member of CCF_MEMBERS) {
       if (!seen.has(member.department)) {
         seen.add(member.department);
         const deptMembers = CCF_MEMBERS.filter(
           (m) => m.department === member.department
         );
-        groups.push({
+        departmentGroups.push({
           department: member.department,
-          members: sortMembersByHierarchy(deptMembers),
+          members: sortMembersByHierarchy(deptMembers).map((m) => ({
+            id: m.id,
+            name: m.name,
+            designation: m.designation,
+            department: m.department,
+            initials: m.initials,
+            photoObjectKey: m.photoObjectKey,
+          })),
         });
       }
     }
-    return groups;
-  }, []);
+  }
+
+  const countText =
+    members !== undefined
+      ? `${members.length} ${members.length === 1 ? "Member" : "Members"}`
+      : MEMBERS_DIRECTORY_INFO.countText;
 
   return (
     <section id="directory" className="py-16 md:py-24 border-b border-border/30 bg-background">
@@ -43,7 +128,6 @@ export function MembersDirectory() {
         <FadeIn direction="up">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6 pb-6 border-b border-border/30">
             <div className="space-y-1">
-              <span className="editorial-tag block">MEMBER DIRECTORY // 50 MEMBERS</span>
               <SectionHeading
                 eyebrow="CRESCENT CLUB OF FINANCE"
                 title={MEMBERS_DIRECTORY_INFO.heading}
@@ -53,7 +137,7 @@ export function MembersDirectory() {
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-ccf-gold/30 bg-ccf-surface-elevated/60 text-ccf-gold font-mono text-sm self-start md:self-auto shrink-0 shadow-xs">
               <Users className="h-4 w-4" aria-hidden="true" />
-              <span className="font-semibold">{MEMBERS_DIRECTORY_INFO.countText}</span>
+              <span className="font-semibold">{countText}</span>
             </div>
           </div>
         </FadeIn>

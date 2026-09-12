@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Media — CCF Admin",
-  description: "Media gallery assets and production storage management for Crescent Club of Finance.",
+  description: "Manage event photos, gallery assets, and media associations.",
 };
 
 export default async function AdminMediaPage() {
@@ -103,7 +103,7 @@ export default async function AdminMediaPage() {
       <AdminPageHeader
         eyebrow="Operations"
         title="Media"
-        description="Manage media storage, gallery assets, visibility toggles, and event media associations."
+        description="Upload, organize, and associate media with events."
       />
 
       {isError ? (

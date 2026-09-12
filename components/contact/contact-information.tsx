@@ -15,7 +15,13 @@ const ICONS = {
   MapPin,
 };
 
-export function ContactInformation() {
+interface ContactInformationProps {
+  channels?: readonly ContactChannel[];
+}
+
+export function ContactInformation({
+  channels = CONTACT_CHANNELS,
+}: ContactInformationProps = {}) {
   return (
     <section className="py-12 md:py-20 border-b border-border/30">
       <Container className="space-y-8">
@@ -30,8 +36,12 @@ export function ContactInformation() {
           </div>
         </FadeIn>
 
-        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {CONTACT_CHANNELS.map((channel: ContactChannel) => {
+        <StaggerContainer
+          className={`grid grid-cols-1 sm:grid-cols-2 gap-6 ${
+            channels.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"
+          }`}
+        >
+          {channels.map((channel: ContactChannel) => {
             const Icon = ICONS[channel.iconName];
             const isClickable = Boolean(channel.href);
 

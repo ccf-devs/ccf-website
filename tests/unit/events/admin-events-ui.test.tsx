@@ -110,14 +110,14 @@ describe("Admin Event Management UI Components (Phase 6)", () => {
       const html = renderToStaticMarkup(
         <EventListTable
           events={[]}
-          dbError="Unable to reach PostgreSQL at localhost:5432"
+          dbError="Database temporarily unavailable. Please try again."
         />
       );
 
       // Must display explicit database error
       expect(html).toContain("Database Connection Unavailable");
-      expect(html).toContain("Unable to reach PostgreSQL at localhost:5432");
-      expect(html).toContain("DATABASE_URL");
+      expect(html).toContain("Database temporarily unavailable. Please try again.");
+      expect(html).toContain("Retry Connection");
 
       // Must NOT pretend that normal empty state occurred!
       expect(html).not.toContain("No events created yet");

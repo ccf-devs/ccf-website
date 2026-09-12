@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getCurrentAdmin } from "@/lib/auth/session";
 import { AdminRole } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { AdminShell, AdminPageHeader } from "@/components/admin";
+import { AdminShell, AdminPageHeader, DashboardErrorState } from "@/components/admin";
 import { RecruitmentManager } from "@/components/admin/recruitment";
 import {
   getRecruitmentSettings,
@@ -28,13 +28,13 @@ export default async function AdminRecruitmentPage() {
     redirect("/admin/auth/login");
   }
 
-
   let settings: RecruitmentSettings = {
     isOpen: false,
     whatsappGroupUrl: null,
   };
   let applications: AdminRecruitmentApplicationItem[] = [];
   let departments: Array<{ id: string; name: string }> = [];
+  let isError = false;
 
   try {
     const [settingsRes, appsRes, deptsRes] = await Promise.all([
@@ -51,6 +51,7 @@ export default async function AdminRecruitmentPage() {
     departments = deptsRes;
   } catch (error) {
     console.error("[AdminRecruitmentPage] Error loading initial recruitment data:", error);
+    isError = true;
   }
 
   return (
@@ -61,11 +62,20 @@ export default async function AdminRecruitmentPage() {
         description="Oversee student recruitment applications across CCF operational departments."
       />
 
-      <RecruitmentManager
-        initialSettings={settings}
-        initialApplications={applications}
-        departments={departments}
-      />
+      {isError ? (
+        <DashboardErrorState
+          error="Recruitment applications and configuration are temporarily unavailable."
+          retryUrl="/admin/recruitment"
+          backUrl="/admin/dashboard"
+          backLabel="Return to Dashboard"
+        />
+      ) : (
+        <RecruitmentManager
+          initialSettings={settings}
+          initialApplications={applications}
+          departments={departments}
+        />
+      )}
     </AdminShell>
   );
 }

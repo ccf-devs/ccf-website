@@ -18,6 +18,11 @@ export interface CcfEvent {
   category?: string;
   registrationState?: string;
   imageObjectKey?: string;
+  registrationMode?: "NONE" | "INTERNAL" | "EXTERNAL";
+  registrationMethod?: "NONE" | "BUILT_IN" | "GOOGLE_FORM";
+  registrationOpensAt?: string | null;
+  registrationClosesAt?: string | null;
+  externalRegistrationUrl?: string | null;
 }
 
 /**
@@ -45,6 +50,8 @@ export const CCF_EVENTS: readonly CcfEvent[] = [
     status: "UPCOMING",
     statusVariant: "warning",
     category: "Symposium",
+    registrationMode: "INTERNAL",
+    registrationMethod: "BUILT_IN",
   },
   {
     id: "evt-finrise-25",
@@ -59,6 +66,8 @@ export const CCF_EVENTS: readonly CcfEvent[] = [
     status: "PREVIOUS EVENT",
     statusVariant: "info",
     category: "Convention",
+    registrationMode: "NONE",
+    registrationMethod: "NONE",
   },
   {
     id: "evt-finvibe-s2",
@@ -75,6 +84,8 @@ export const CCF_EVENTS: readonly CcfEvent[] = [
     status: "PREVIOUS EVENT",
     statusVariant: "info",
     category: "Festival",
+    registrationMode: "NONE",
+    registrationMethod: "NONE",
   },
 ] as const;
 
@@ -92,6 +103,75 @@ export const CCF_PAST_EVENTS: readonly CcfEvent[] = CCF_EVENTS.filter(
  */
 export function getEventBySlug(slug: string): CcfEvent | undefined {
   return CCF_EVENTS.find((event) => event.slug === slug);
+}
+
+/**
+ * Adapts a database Event (with optional EventContent) to the public CcfEvent shape.
+ */
+export function toPublicEventSummary(dbEvent: {
+  id: string;
+  slug: string;
+  name: string;
+  status: string;
+  startsAt: Date | string | null;
+  endsAt?: Date | string | null;
+  venue?: string | null;
+  registrationMode?: string | null;
+  registrationMethod?: string | null;
+  registrationOpensAt?: Date | string | null;
+  registrationClosesAt?: Date | string | null;
+  content?: {
+    descriptionRich?: string | null;
+    rulesRich?: string | null;
+    instructionsRich?: string | null;
+    eligibilityRich?: string | null;
+    notesRich?: string | null;
+  } | null;
+}): CcfEvent {
+  const now = new Date();
+  const startsAtDate = dbEvent.startsAt ? new Date(dbEvent.startsAt) : null;
+  const isUpcoming = !startsAtDate || startsAtDate >= now;
+
+  let dateText = "TBA";
+  if (startsAtDate && !isNaN(startsAtDate.getTime())) {
+    dateText = startsAtDate.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  }
+
+  const desc = dbEvent.content?.descriptionRich || "";
+  const shortDesc = desc.length > 160 ? desc.slice(0, 157) + "..." : desc;
+
+  let externalRegistrationUrl: string | null = null;
+  const potentialUrl = dbEvent.content?.instructionsRich || dbEvent.content?.notesRich || "";
+  const match = potentialUrl.match(/https?:\/\/[^\s"']+/);
+  if (match) {
+    externalRegistrationUrl = match[0];
+  }
+
+  return {
+    id: dbEvent.id,
+    slug: dbEvent.slug,
+    name: dbEvent.name,
+    status: isUpcoming ? "UPCOMING" : "PREVIOUS EVENT",
+    statusVariant: isUpcoming ? "warning" : "info",
+    dateText,
+    venue: dbEvent.venue || "Crescent Campus, Vandalur",
+    venueText: dbEvent.venue || "Crescent Campus, Vandalur",
+    description: desc,
+    shortDescription: shortDesc,
+    registrationMode: (dbEvent.registrationMode as any) || "NONE",
+    registrationMethod: (dbEvent.registrationMethod as any) || "NONE",
+    registrationOpensAt: dbEvent.registrationOpensAt
+      ? new Date(dbEvent.registrationOpensAt).toISOString()
+      : null,
+    registrationClosesAt: dbEvent.registrationClosesAt
+      ? new Date(dbEvent.registrationClosesAt).toISOString()
+      : null,
+    externalRegistrationUrl,
+  };
 }
 
 export const EVENTS_HERO = {

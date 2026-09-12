@@ -101,15 +101,11 @@ export function EventListTable({ events = [], dbError }: EventListTableProps) {
             </h3>
             <p className="text-sm text-red-300/80 leading-relaxed">
               Unable to reach the database server to query administrative events.
-              This occurs in environments where local PostgreSQL is not running or{" "}
-              <code className="rounded bg-red-950/60 px-1.5 py-0.5 font-mono text-xs text-red-200">
-                DATABASE_URL
-              </code>{" "}
-              is unconfigured.
+              Please try again shortly.
             </p>
             <div className="pt-2">
-              <p className="text-xs text-ccf-muted font-mono">
-                Error details: {dbError}
+              <p className="text-xs text-ccf-muted">
+                {dbError || "Database temporarily unavailable. Please try again."}
               </p>
             </div>
           </div>
@@ -125,7 +121,7 @@ export function EventListTable({ events = [], dbError }: EventListTableProps) {
             size="sm"
             className="border-red-500/30 text-red-200 hover:bg-red-500/10"
           >
-            <Link href="/admin/events/new">Create Event (Form Preview)</Link>
+            <Link href="/admin/events">Retry Connection</Link>
           </Button>
         </div>
       </Card>

@@ -18,9 +18,26 @@ import {
   Download,
   Loader2,
   AlertCircle,
+  ExternalLink,
+  Copy,
+  Check,
+  Image as ImageIcon,
+  Eye,
+  EyeOff,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { EventStatusBadge } from "./event-status-badge";
 import {
   EventStatus,
@@ -64,8 +81,22 @@ export interface EventDetailData {
   } | null;
 }
 
+export interface EventMediaItem {
+  id: string;
+  objectKey: string;
+  altText: string;
+  mimeType: string;
+  byteSize: number;
+  width?: number | null;
+  height?: number | null;
+  visibility: boolean;
+  displayOrder: number;
+  createdAt: Date | string;
+}
+
 interface EventDetailViewProps {
   event: EventDetailData;
+  media?: EventMediaItem[];
 }
 
 function formatDateDisplay(val: Date | string | null | undefined): string {
@@ -81,12 +112,143 @@ function formatDateDisplay(val: Date | string | null | undefined): string {
   });
 }
 
-export function EventDetailView({ event }: EventDetailViewProps) {
+export function EventDetailView({ event, media = [] }: EventDetailViewProps) {
+  const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  const [mediaList, setMediaList] = useState<EventMediaItem[]>(media);
+  const [settingCoverId, setSettingCoverId] = useState<string | null>(null);
+  const [togglingVisibilityId, setTogglingVisibilityId] = useState<string | null>(null);
+  const [isDeletingMedia, setIsDeletingMedia] = useState(false);
+  const [mediaToDelete, setMediaToDelete] = useState<EventMediaItem | null>(null);
+  const [coverFeedback, setCoverFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  const handleToggleVisibility = async (item: EventMediaItem) => {
+    setTogglingVisibilityId(item.id);
+    setCoverFeedback(null);
+
+    try {
+      const nextVisibility = !item.visibility;
+      const res = await fetch(`/api/admin/media/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: nextVisibility }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update media visibility.");
+      }
+
+      setMediaList((prev) =>
+        prev.map((m) => (m.id === item.id ? { ...m, visibility: nextVisibility } : m))
+      );
+
+      setCoverFeedback({
+        type: "success",
+        message: `Media visibility set to ${nextVisibility ? "Visible" : "Hidden"}.`,
+      });
+    } catch (err) {
+      setCoverFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to update visibility.",
+      });
+    } finally {
+      setTogglingVisibilityId(null);
+    }
+  };
+
+  const handleDeleteMedia = async (item: EventMediaItem) => {
+    setIsDeletingMedia(true);
+    setCoverFeedback(null);
+
+    try {
+      const res = await fetch(`/api/admin/media/${item.id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete media asset.");
+      }
+
+      setMediaList((prev) => prev.filter((m) => m.id !== item.id));
+      setMediaToDelete(null);
+
+      setCoverFeedback({
+        type: "success",
+        message: "Media asset deleted successfully.",
+      });
+    } catch (err) {
+      setCoverFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to delete media.",
+      });
+    } finally {
+      setIsDeletingMedia(false);
+    }
+  };
+
+  const handleSetCover = async (mediaId: string) => {
+    setSettingCoverId(mediaId);
+    setCoverFeedback(null);
+
+    try {
+      const res = await fetch(`/api/admin/events/${event.id}/media/set-cover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to set cover image.");
+      }
+
+      setMediaList((prev) => {
+        const target = prev.find((m) => m.id === mediaId);
+        if (!target) return prev;
+        const others = prev
+          .filter((m) => m.id !== mediaId)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+        return [
+          { ...target, displayOrder: 0 },
+          ...others.map((m, idx) => ({ ...m, displayOrder: idx + 1 })),
+        ];
+      });
+
+      setCoverFeedback({
+        type: "success",
+        message: "Event cover image updated successfully.",
+      });
+    } catch (err) {
+      setCoverFeedback({
+        type: "error",
+        message: err instanceof Error ? err.message : "Failed to set cover image.",
+      });
+    } finally {
+      setSettingCoverId(null);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (typeof window !== "undefined") {
+      try {
+        await navigator.clipboard.writeText(`${window.location.origin}/events/${event.slug}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy link", err);
+      }
+    }
+  };
 
   const handleExportCsv = async () => {
     setIsExporting(true);
@@ -184,7 +346,7 @@ export function EventDetailView({ event }: EventDetailViewProps) {
           <EventStatusBadge status={event.status} />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {event.registrationMode !== RegistrationMode.NONE && (
             <>
               <Button
@@ -200,7 +362,7 @@ export function EventDetailView({ event }: EventDetailViewProps) {
                 ) : (
                   <Download className="h-4 w-4 mr-1.5 text-ccf-gold" aria-hidden="true" />
                 )}
-                <span>Export Registrations (CSV)</span>
+                <span>Export CSV</span>
               </Button>
 
               <Button
@@ -210,7 +372,7 @@ export function EventDetailView({ event }: EventDetailViewProps) {
               >
                 <Link href={`/admin/events/${event.id}/form`}>
                   <FileText className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                  <span>Manage Form Engine</span>
+                  <span>Form Engine</span>
                 </Link>
               </Button>
             </>
@@ -223,9 +385,40 @@ export function EventDetailView({ event }: EventDetailViewProps) {
           >
             <Link href={`/admin/events/${event.id}/edit`}>
               <Edit className="h-4 w-4 mr-1.5" aria-hidden="true" />
-              <span>Edit Configuration</span>
+              <span>Edit</span>
             </Link>
           </Button>
+
+          {event.status === EventStatus.PUBLISHED && (
+            <>
+              <Button
+                asChild
+                variant="outline"
+                className="border-border text-ccf-muted hover:text-ccf-offwhite"
+                title="View public event page"
+              >
+                <Link href={`/events/${event.slug}`} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="h-4 w-4 mr-1.5 text-ccf-gold" aria-hidden="true" />
+                  <span>View Public Page</span>
+                </Link>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCopyLink}
+                className="border-border text-ccf-muted hover:text-ccf-offwhite"
+                title="Copy link to public event page"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 mr-1.5 text-emerald-400" aria-hidden="true" />
+                ) : (
+                  <Copy className="h-4 w-4 mr-1.5 text-ccf-gold" aria-hidden="true" />
+                )}
+                <span>{copied ? "Copied" : "Copy Link"}</span>
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -510,6 +703,174 @@ export function EventDetailView({ event }: EventDetailViewProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* 6. Event Media & Cover Management Card */}
+      {(() => {
+        const visibleMedia = mediaList.filter((m) => m.visibility);
+        const coverMedia = visibleMedia.sort((a, b) => a.displayOrder - b.displayOrder)[0];
+
+        return (
+          <Card className="border-border/60 bg-ccf-surface p-6 shadow-sm space-y-4">
+            <CardHeader className="p-0">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <CardTitle className="text-base font-semibold text-ccf-offwhite flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-ccf-gold" aria-hidden="true" />
+                  <span>Event Media & Cover Image</span>
+                </CardTitle>
+                <Button asChild size="sm" variant="outline" className="text-xs border-border text-ccf-muted hover:text-ccf-offwhite">
+                  <Link href={`/admin/media?eventId=${event.id}`}>
+                    <span>Manage in Media Library</span>
+                  </Link>
+                </Button>
+              </div>
+              <CardDescription className="text-xs text-ccf-muted">
+                The visible media item with lowest order is automatically used as the event cover poster on public pages.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="p-0 pt-2 space-y-4">
+              {coverFeedback && (
+                <div
+                  className={`p-3 rounded-md flex items-center gap-2 text-xs ${
+                    coverFeedback.type === "success"
+                      ? "bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"
+                      : "bg-red-500/10 border border-red-500/30 text-red-400"
+                  }`}
+                >
+                  {coverFeedback.type === "success" ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                  )}
+                  <span>{coverFeedback.message}</span>
+                </div>
+              )}
+
+              {mediaList.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {mediaList.map((item) => {
+                    const isCover = coverMedia?.id === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-lg border p-3 bg-ccf-surface-sunken flex flex-col space-y-2.5 transition-colors ${
+                          isCover ? "border-ccf-gold/60 ring-1 ring-ccf-gold/40" : "border-border/60"
+                        }`}
+                      >
+                        <div className="relative aspect-video rounded overflow-hidden bg-black/40 border border-border/40">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={`/api/media/${item.objectKey}`}
+                            alt={item.altText || "Event media"}
+                            className="w-full h-full object-cover"
+                          />
+                          {isCover && (
+                            <div className="absolute top-1.5 left-1.5 bg-ccf-gold text-ccf-navy text-[10px] font-bold px-1.5 py-0.5 rounded shadow">
+                              COVER
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-1 text-xs flex-1">
+                          <p className="text-ccf-offwhite font-medium truncate" title={item.altText}>
+                            {item.altText || item.objectKey}
+                          </p>
+                          <div className="flex items-center justify-between text-[11px] text-ccf-muted">
+                            <span>Order: #{item.displayOrder}</span>
+                            <span className={item.visibility ? "text-emerald-400" : "text-amber-400"}>
+                              {item.visibility ? "Visible" : "Hidden"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={togglingVisibilityId === item.id}
+                            onClick={() => handleToggleVisibility(item)}
+                            className="flex-1 text-[11px] h-7 px-2 border-border/80 text-ccf-offwhite hover:bg-ccf-surface-elevated"
+                            title={item.visibility ? "Hide from public view" : "Make visible to public"}
+                          >
+                            {togglingVisibilityId === item.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : item.visibility ? (
+                              <EyeOff className="h-3 w-3 mr-1 text-amber-400" />
+                            ) : (
+                              <Eye className="h-3 w-3 mr-1 text-emerald-400" />
+                            )}
+                            <span>{item.visibility ? "Hide" : "Show"}</span>
+                          </Button>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setMediaToDelete(item)}
+                            className="text-[11px] h-7 px-2 border-border/80 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                            title="Delete media"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        {!isCover && item.visibility && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={settingCoverId === item.id}
+                            onClick={() => handleSetCover(item.id)}
+                            className="w-full text-xs h-7 border-border text-ccf-gold hover:bg-ccf-gold/10"
+                          >
+                            {settingCoverId === item.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : null}
+                            <span>Set as Cover</span>
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-6 text-center rounded-lg border border-dashed border-border/60 text-xs text-ccf-muted space-y-2">
+                  <p>No media items associated with this event yet.</p>
+                  <Button asChild size="sm" variant="outline" className="text-xs">
+                    <Link href={`/admin/media?eventId=${event.id}`}>
+                      <span>Upload Event Media</span>
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+
+            {/* Media Deletion Confirmation Dialog */}
+            <AlertDialog open={!!mediaToDelete} onOpenChange={(open) => !open && setMediaToDelete(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Media Asset</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to permanently delete this media asset? This action will remove the asset from cloud storage and the database.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isDeletingMedia}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => mediaToDelete && handleDeleteMedia(mediaToDelete)}
+                    disabled={isDeletingMedia}
+                    className="bg-red-600 text-white hover:bg-red-700"
+                  >
+                    {isDeletingMedia ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                    <span>Delete Asset</span>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </Card>
+        );
+      })()}
 
       {/* System Identifiers & Timestamps */}
       <Card className="border-border/60 bg-ccf-surface-sunken p-4 shadow-sm text-xs text-ccf-muted">

@@ -174,10 +174,11 @@ describe("Contact Page Comprehensive Verification (Phase 5 Task 6)", () => {
       expect(html).toContain(
         "href=\"https://www.linkedin.com/company/ccf-2024/\""
       );
-      expect(html).toContain("Crescent College, Vandalur");
       expect(html).toContain("Official email channel for contacting Crescent Club of Finance.");
       expect(html).toContain("Official Instagram channel of Crescent Club of Finance.");
       expect(html).toContain("Official LinkedIn channel of Crescent Club of Finance.");
+      expect(html).not.toContain("Campus Location");
+      expect(html).not.toContain("Crescent College, Vandalur");
     });
 
     it("renders ContactSocial with external social links and conservative copy", () => {

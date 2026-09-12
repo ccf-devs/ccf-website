@@ -14,8 +14,7 @@ export function VisionMissionSection() {
       <Container className="space-y-16">
         <FadeIn direction="up">
           <div className="text-center space-y-2">
-            <span className="editorial-tag">02 / STRATEGIC MANDATE</span>
-            <SectionHeading
+              <SectionHeading
               eyebrow="Aspiration & Commitment"
               title="Vision, Mission & Objectives"
               description="Our foundational purpose at Crescent College as defined by the CCF constitution."

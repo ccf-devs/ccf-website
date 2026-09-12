@@ -26,29 +26,79 @@ const DEPT_ICONS: Record<CcfDepartment["iconName"], React.ElementType> = {
   CalendarDays,
 };
 
-export function DepartmentsGrid() {
+export interface DbDepartment {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+}
+
+interface DepartmentsGridProps {
+  departments?: DbDepartment[];
+  isError?: boolean;
+}
+
+export function DepartmentsGrid({ departments, isError }: DepartmentsGridProps = {}) {
+  if (isError) {
+    return (
+      <section id="directory" className="py-16 md:py-24 border-b border-border/30 bg-ccf-surface-sunken/40">
+        <Container className="space-y-4 text-center py-12">
+          <p className="text-ccf-muted">Department information is temporarily unavailable.</p>
+        </Container>
+      </section>
+    );
+  }
+
+  if (departments !== undefined && departments.length === 0) {
+    return (
+      <section id="directory" className="py-16 md:py-24 border-b border-border/30 bg-ccf-surface-sunken/40">
+        <Container className="space-y-4 text-center py-12">
+          <p className="text-ccf-muted">Department information coming soon.</p>
+        </Container>
+      </section>
+    );
+  }
+
+  const displayDepts =
+    departments !== undefined
+      ? departments.map((dept) => {
+          const staticMatch = CCF_DEPARTMENTS.find(
+            (d) => d.slug === dept.slug || d.name.toLowerCase() === dept.name.toLowerCase()
+          );
+          return {
+            id: dept.id,
+            name: dept.name,
+            slug: dept.slug,
+            description: dept.description || staticMatch?.description || "",
+            iconName: (staticMatch?.iconName || "FolderKanban") as CcfDepartment["iconName"],
+            focusAreas: staticMatch?.focusAreas || [],
+          };
+        })
+      : CCF_DEPARTMENTS;
+
+  const badgeText = `${displayDepts.length} ${displayDepts.length === 1 ? "Department" : "Departments"}`;
+
   return (
     <section id="directory" className="py-16 md:py-24 border-b border-border/30 bg-ccf-surface-sunken/40">
       <Container className="space-y-12">
         <FadeIn direction="up">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-1">
-              <span className="editorial-tag block">01 / OPERATIONAL DIRECTORY</span>
               <SectionHeading
                 eyebrow="Directory"
                 title="Operational Departments"
-                description="Explore the five departments that support CCF's activities and initiatives."
+                description="Explore the departments that support CCF's activities and initiatives."
               />
             </div>
             <Badge variant="default" className="self-start md:self-auto shrink-0">
-              5 Departments
+              {badgeText}
             </Badge>
           </div>
         </FadeIn>
 
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {CCF_DEPARTMENTS.map((dept, index) => {
-            const IconComp = DEPT_ICONS[dept.iconName];
+          {displayDepts.map((dept, index) => {
+            const IconComp = DEPT_ICONS[dept.iconName] || FolderKanban;
             const stepNum = String(index + 1).padStart(2, "0");
 
             return (

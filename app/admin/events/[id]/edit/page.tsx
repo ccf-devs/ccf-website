@@ -85,10 +85,8 @@ export default async function AdminEditEventPage({ params }: PageProps) {
       };
     }
   } catch (error) {
-    errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Failed to connect to database to retrieve event.";
+    console.error("[AdminEditEventPage] Failed to load event for editing:", error);
+    errorMessage = "Unable to reach database. Please try again.";
   }
 
   return (

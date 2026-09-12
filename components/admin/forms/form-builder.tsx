@@ -16,6 +16,16 @@ import { FormPreview } from "./form-preview";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   Plus,
   Send,
@@ -67,6 +77,7 @@ export function FormBuilder({
   // Modals state
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deletePendingFieldId, setDeletePendingFieldId] = useState<string | null>(null);
   const [isCloning, setIsCloning] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -106,7 +117,8 @@ export function FormBuilder({
         }
         const data = await res.json();
         if (isMounted) {
-          const mappedFields = (data.fields || []).map(toEventFieldDomain);
+          const rawFields = data.version?.fields || data.fields || [];
+          const mappedFields = rawFields.map(toEventFieldDomain);
           setFields(mappedFields);
         }
       } catch (err: any) {
@@ -221,7 +233,8 @@ export function FormBuilder({
       const res = await fetch(`/api/admin/events/${eventId}/forms/${selectedVersionId}`);
       if (res.ok) {
         const data = await res.json();
-        setFields((data.fields || []).map(toEventFieldDomain));
+        const rawFields = data.version?.fields || data.fields || [];
+        setFields(rawFields.map(toEventFieldDomain));
       }
 
       showFeedback("success", "Loaded CCF Standard Registration fields successfully");
@@ -283,14 +296,16 @@ export function FormBuilder({
   };
 
   // Delete a field
-  const handleDeleteField = async (fieldId: string) => {
-    if (!selectedVersionId) return;
-    const target = fields.find((f) => f.id === fieldId);
-    if (!target) return;
+  const handleDeleteField = (fieldId: string) => {
+    setDeletePendingFieldId(fieldId);
+  };
 
-    if (!confirm(`Are you sure you want to delete the field "${target.label}"?`)) {
-      return;
-    }
+  const confirmDeleteField = async () => {
+    if (!deletePendingFieldId || !selectedVersionId) return;
+    const fieldId = deletePendingFieldId;
+    const target = fields.find((f) => f.id === fieldId);
+    setDeletePendingFieldId(null);
+    if (!target) return;
 
     try {
       const res = await fetch(
@@ -355,7 +370,8 @@ export function FormBuilder({
       const res = await fetch(`/api/admin/events/${eventId}/forms/${selectedVersionId}`);
       if (res.ok) {
         const data = await res.json();
-        setFields((data.fields || []).map(toEventFieldDomain));
+        const rawFields = data.version?.fields || data.fields || [];
+        setFields(rawFields.map(toEventFieldDomain));
       }
     }
   };
@@ -660,7 +676,7 @@ export function FormBuilder({
           </div>
 
           {/* Sub Navigation Tabs */}
-          <div className="flex items-center justify-between gap-4 border-b border-border/50">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/50 pb-1">
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -896,6 +912,31 @@ export function FormBuilder({
           </div>
         </div>
       )}
+      {/* Delete Field Confirmation Dialog */}
+      <AlertDialog
+        open={!!deletePendingFieldId}
+        onOpenChange={(open) => {
+          if (!open) setDeletePendingFieldId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Field?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this field? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteField}
+              className="bg-red-600 hover:bg-red-700 text-white focus:ring-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

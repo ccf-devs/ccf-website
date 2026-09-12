@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { X, Loader2, AlertTriangle, UserPlus, UserCheck } from "lucide-react";
+import { X, Loader2, AlertTriangle, UserPlus, UserCheck, Image as ImageIcon } from "lucide-react";
 
 export interface MemberDepartmentInfo {
   id: string;
@@ -84,8 +84,89 @@ function MemberDialogInner({
   const [visibility, setVisibility] = useState(member?.visibility ?? true);
   const [bio, setBio] = useState(member?.bio || "");
   const [socialUrl, setSocialUrl] = useState(member?.socialUrl || "");
+  const [photoMediaId, setPhotoMediaId] = useState<string | null>(
+    member?.photoMediaId || member?.photo?.id || null
+  );
+  const [selectedPhoto, setSelectedPhoto] = useState<{
+    id: string;
+    objectKey: string;
+    altText: string | null;
+  } | null>(member?.photo || null);
+  const [availableMedia, setAvailableMedia] = useState<
+    Array<{
+      id: string;
+      objectKey: string;
+      altText: string | null;
+      mimeType: string;
+      visibility: boolean;
+      eventId: string | null;
+      event?: { name: string } | null;
+    }>
+  >([]);
+  const [loadingMedia, setLoadingMedia] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const initialPhotoId = member?.photoMediaId || member?.photo?.id || null;
+
+  // Load existing media library assets for photo selection once on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/admin/media")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (!isMounted) return;
+        if (Array.isArray(data.media)) {
+          const images = data.media.filter(
+            (m: any) => m.mimeType && m.mimeType.startsWith("image/")
+          );
+          setAvailableMedia(images);
+
+          // Resolve photo preview if initial photoMediaId exists
+          if (initialPhotoId) {
+            const match = images.find((m: any) => m.id === initialPhotoId);
+            if (match) {
+              setSelectedPhoto({
+                id: match.id,
+                objectKey: match.objectKey,
+                altText: match.altText,
+              });
+            }
+          }
+        }
+      })
+      .catch(() => {
+        // Media load optional / handled gracefully
+      })
+      .finally(() => {
+        if (isMounted) setLoadingMedia(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [initialPhotoId]);
+
+  const handleSelectPhoto = (mediaId: string) => {
+    if (!mediaId) {
+      setPhotoMediaId(null);
+      setSelectedPhoto(null);
+      return;
+    }
+    setPhotoMediaId(mediaId);
+    const found = availableMedia.find((m) => m.id === mediaId);
+    if (found) {
+      setSelectedPhoto({
+        id: found.id,
+        objectKey: found.objectKey,
+        altText: found.altText,
+      });
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoMediaId(null);
+    setSelectedPhoto(null);
+  };
 
   // Filter allowed departments based on Rule 4:
   // - New members: ONLY active departments allowed.
@@ -123,6 +204,7 @@ function MemberDialogInner({
         visibility,
         bio: bio.trim() || null,
         socialUrl: socialUrl.trim() || null,
+        photoMediaId: photoMediaId || null,
       };
 
       const res = await fetch(url, {
@@ -259,6 +341,69 @@ function MemberDialogInner({
               />
               <span className="text-[10px] text-ccf-muted block">Lower numbers sort first</span>
             </div>
+          </div>
+
+          {/* Profile Photo Association */}
+          <div className="space-y-2.5 rounded-lg border border-border/60 bg-ccf-surface-sunken p-3.5">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="member-photo" className="text-xs font-semibold text-ccf-offwhite flex items-center gap-1.5">
+                <ImageIcon className="h-3.5 w-3.5 text-ccf-gold" />
+                <span>Profile Photo</span>
+              </Label>
+              {selectedPhoto && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  className="text-[11px] text-red-400 hover:text-red-300 transition-colors font-medium"
+                >
+                  Remove Photo
+                </button>
+              )}
+            </div>
+
+            {selectedPhoto && (
+              <div className="flex items-center gap-3 p-2.5 rounded-md bg-ccf-surface border border-border/40">
+                <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-ccf-gold/40 bg-ccf-surface-elevated shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/media/${selectedPhoto.objectKey}`}
+                    alt={selectedPhoto.altText || "Selected member photo preview"}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-ccf-offwhite truncate">
+                    {selectedPhoto.altText || "Member Photo"}
+                  </p>
+                  <p className="text-[10px] text-ccf-muted font-mono truncate">
+                    {selectedPhoto.objectKey}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <select
+              id="member-photo"
+              value={photoMediaId || ""}
+              onChange={(e) => handleSelectPhoto(e.target.value)}
+              disabled={loadingMedia}
+              className="w-full h-9 rounded-md border border-border/60 bg-ccf-surface px-3 text-xs text-ccf-offwhite focus:border-ccf-gold focus:outline-none"
+            >
+              <option value="">
+                {loadingMedia
+                  ? "Loading media assets..."
+                  : "No Photo (Display Initials Monogram)"}
+              </option>
+              {availableMedia.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.altText ? `${m.altText} — ${m.objectKey}` : m.objectKey}
+                  {m.event ? ` [Event: ${m.event.name}]` : " [General Asset]"}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-ccf-muted">
+              Select an image from the CCF media library. If none is selected, the directory displays the member&apos;s monogram initials.
+            </p>
           </div>
 
           {/* Social URL */}

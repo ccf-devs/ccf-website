@@ -1,9 +1,14 @@
 import React from "react";
 import { Header } from "./header";
 import { Footer } from "./footer";
+import { AdminKeyboardShortcut } from "@/components/admin/admin-keyboard-shortcut";
+import { NavProgressBar } from "./nav-progress-bar";
+
+import type { PublicContactSettings } from "@/lib/site-settings/service";
 
 interface PublicShellProps {
   children: React.ReactNode;
+  contactSettings?: PublicContactSettings;
 }
 
 /**
@@ -13,10 +18,18 @@ interface PublicShellProps {
  * - Public navigation header (desktop + mobile)
  * - Flexible semantic <main> region with accessible anchor
  * - Public footer with verified official information
+ * - Admin keyboard shortcut (Ctrl+Alt+A / Cmd+Option+A → /admin)
+ * - Global navigation progress bar
  */
-export function PublicShell({ children }: PublicShellProps) {
+export function PublicShell({ children, contactSettings }: PublicShellProps) {
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
+      {/* Navigation progress bar */}
+      <NavProgressBar />
+
+      {/* Admin keyboard shortcut — navigation convenience, not a security mechanism */}
+      <AdminKeyboardShortcut />
+
       {/* Accessible skip link for keyboard navigation */}
       <a
         href="#main-content"
@@ -26,7 +39,7 @@ export function PublicShell({ children }: PublicShellProps) {
       </a>
 
       {/* Public Header */}
-      <Header />
+      <Header contactSettings={contactSettings} />
 
       {/* Primary Main Content Area */}
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
@@ -34,7 +47,7 @@ export function PublicShell({ children }: PublicShellProps) {
       </main>
 
       {/* Public Footer */}
-      <Footer />
+      <Footer contactSettings={contactSettings} />
     </div>
   );
 }

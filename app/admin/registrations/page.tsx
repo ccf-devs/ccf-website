@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/config";
 import { redirect } from "next/navigation";
-import { AdminShell, AdminPageHeader } from "@/components/admin";
+import { AdminShell, AdminPageHeader, DashboardErrorState } from "@/components/admin";
 import { RegistrationListTable, AdminRegistrationItem } from "@/components/admin/registrations/registration-list-table";
 import { prisma } from "@/lib/db/client";
 
@@ -22,6 +22,7 @@ export default async function AdminRegistrationsPage() {
 
   let registrations: AdminRegistrationItem[] = [];
   let events: Array<{ id: string; name: string }> = [];
+  let isError = false;
 
   try {
     const [dbEvents, dbRegistrations] = await Promise.all([
@@ -118,6 +119,7 @@ export default async function AdminRegistrationsPage() {
     }));
   } catch (error) {
     console.error("[AdminRegistrationsPage] Failed to fetch registrations:", error);
+    isError = true;
   }
 
   return (
@@ -128,7 +130,16 @@ export default async function AdminRegistrationsPage() {
         description="Review participant registrations, track payment statuses, and manage event capacity."
       />
 
-      <RegistrationListTable registrations={registrations} events={events} />
+      {isError ? (
+        <DashboardErrorState
+          error="Operational registration records are temporarily unavailable."
+          retryUrl="/admin/registrations"
+          backUrl="/admin/dashboard"
+          backLabel="Return to Dashboard"
+        />
+      ) : (
+        <RegistrationListTable registrations={registrations} events={events} />
+      )}
     </AdminShell>
   );
 }

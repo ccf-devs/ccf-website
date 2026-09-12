@@ -212,7 +212,7 @@ export default async function EventRegistrationPage({ params }: PageProps) {
     return (
       <Container className="py-12 md:py-20">
         <RegistrationStatusNotice
-          reason="NOT_INTERNAL"
+          reason="NO_FORM"
           eventName={event.name}
           eventSlug={event.slug}
         />

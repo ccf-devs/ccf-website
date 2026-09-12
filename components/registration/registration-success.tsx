@@ -183,7 +183,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
             </Button>
           </div>
           <p className="text-[11px] text-ccf-muted">
-            Save this code for check-in, payment verification, and event correspondence.
+            Save this code for event check-in and future correspondence.
           </p>
         </div>
 
@@ -243,36 +243,6 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
             </div>
           </div>
         )}
-
-        {/* Participant & Event Summary Details */}
-        <div className="grid grid-cols-2 gap-4 text-left max-w-md mx-auto text-xs bg-ccf-navy/40 p-4 rounded-lg border border-border/40">
-          <div>
-            <span className="text-ccf-muted block">
-              {confirmation.registrationType === "TEAM" ? "Team Leader" : "Participant"}
-            </span>
-            <span className="text-ccf-offwhite font-medium truncate block">
-              {confirmation.participantName}
-            </span>
-          </div>
-          <div>
-            <span className="text-ccf-muted block">Format</span>
-            <span className="text-ccf-offwhite font-medium block">
-              {confirmation.registrationType === "TEAM" ? "Team" : "Individual"}
-            </span>
-          </div>
-          <div>
-            <span className="text-ccf-muted block">Category</span>
-            <span className="text-ccf-offwhite font-medium block">
-              {confirmation.participantType === "CRESCENT" ? "Crescent Student" : "External Participant"}
-            </span>
-          </div>
-          <div>
-            <span className="text-ccf-muted block">Status</span>
-            <span className="text-emerald-400 font-medium font-mono block">
-              {confirmation.status}
-            </span>
-          </div>
-        </div>
 
         {/* Payment Section (If PAID) */}
         {isPaid && confirmation.payment && (
@@ -431,7 +401,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <Button asChild variant="outline">
             <Link href={`/events/${confirmation.event.slug}`}>
-              Back to Event Page
+              Back to Event
             </Link>
           </Button>
           <Button asChild variant="ghost">

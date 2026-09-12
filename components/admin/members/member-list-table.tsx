@@ -311,21 +311,37 @@ export function MemberListTable({
                   >
                     {/* Member Name */}
                     <td className="p-3.5 pl-4">
-                      <div className="space-y-0.5">
-                        <span className="font-bold text-ccf-offwhite block">
-                          {m.name}
-                        </span>
-                        {m.socialUrl && (
-                          <a
-                            href={m.socialUrl}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="inline-flex items-center gap-1 text-[11px] text-ccf-gold hover:underline"
-                          >
-                            <span>Profile</span>
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
+                      <div className="flex items-center gap-3">
+                        {m.photo?.objectKey ? (
+                          <div className="h-8 w-8 rounded-full overflow-hidden border border-ccf-gold/40 bg-ccf-surface-elevated shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={`/api/media/${m.photo.objectKey}`}
+                              alt={m.photo.altText || m.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-8 w-8 rounded-full border border-border/60 bg-ccf-surface-elevated text-ccf-gold font-bold text-[10px] flex items-center justify-center shrink-0">
+                            {m.name.slice(0, 2).toUpperCase()}
+                          </div>
                         )}
+                        <div className="space-y-0.5 min-w-0">
+                          <span className="font-bold text-ccf-offwhite block truncate">
+                            {m.name}
+                          </span>
+                          {m.socialUrl && (
+                            <a
+                              href={m.socialUrl}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="inline-flex items-center gap-1 text-[11px] text-ccf-gold hover:underline"
+                            >
+                              <span>Profile</span>
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </td>
 

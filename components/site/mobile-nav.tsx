@@ -5,15 +5,23 @@ import Link from "next/link";
 import { X, Mail, ExternalLink } from "lucide-react";
 import { NavItem, CCF_PUBLIC_INFO } from "./navigation-data";
 import { cn } from "@/lib/utils";
+import type { PublicContactSettings } from "@/lib/site-settings/service";
 
 interface MobileNavProps {
   isOpen: boolean;
   onClose: () => void;
   items: readonly NavItem[];
   pathname: string;
+  contactSettings?: PublicContactSettings;
 }
 
-export function MobileNav({ isOpen, onClose, items, pathname }: MobileNavProps) {
+export function MobileNav({
+  isOpen,
+  onClose,
+  items,
+  pathname,
+  contactSettings,
+}: MobileNavProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   // Close on Escape key press and manage body scroll locking
@@ -125,45 +133,53 @@ export function MobileNav({ isOpen, onClose, items, pathname }: MobileNavProps) 
         </nav>
 
         {/* Footer info inside mobile drawer */}
-        <div className="border-t border-border/40 pt-6 text-xs text-ccf-muted space-y-4">
-          <div className="flex items-center gap-2 text-ccf-muted">
-            <Mail className="h-4 w-4 shrink-0 text-ccf-gold" aria-hidden="true" />
-            <a
-              href={`mailto:${CCF_PUBLIC_INFO.email}`}
-              className="hover:text-ccf-offwhite transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {CCF_PUBLIC_INFO.email}
-            </a>
-          </div>
+        {(() => {
+          const email = contactSettings?.contactEmail || CCF_PUBLIC_INFO.email;
+          const instagram = contactSettings?.socialInstagram || CCF_PUBLIC_INFO.socials.instagram;
+          const linkedin = contactSettings?.socialLinkedin || CCF_PUBLIC_INFO.socials.linkedin;
 
-          <div className="flex items-center gap-4 pt-2">
-            <a
-              href={CCF_PUBLIC_INFO.socials.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-ccf-muted hover:text-ccf-gold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              aria-label="Crescent Club of Finance Instagram (opens in a new tab)"
-            >
-              <span>Instagram</span>
-              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-            </a>
+          return (
+            <div className="border-t border-border/40 pt-6 text-xs text-ccf-muted space-y-4">
+              <div className="flex items-center gap-2 text-ccf-muted">
+                <Mail className="h-4 w-4 shrink-0 text-ccf-gold" aria-hidden="true" />
+                <a
+                  href={`mailto:${email}`}
+                  className="hover:text-ccf-offwhite transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {email}
+                </a>
+              </div>
 
-            <a
-              href={CCF_PUBLIC_INFO.socials.linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-ccf-muted hover:text-ccf-gold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              aria-label="Crescent Club of Finance LinkedIn (opens in a new tab)"
-            >
-              <span>LinkedIn</span>
-              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-            </a>
-          </div>
+              <div className="flex items-center gap-4 pt-2">
+                <a
+                  href={instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-ccf-muted hover:text-ccf-gold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  aria-label="Crescent Club of Finance Instagram (opens in a new tab)"
+                >
+                  <span>Instagram</span>
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                </a>
 
-          <p className="text-[11px] text-slate-500 pt-2">
-            {CCF_PUBLIC_INFO.campus}
-          </p>
-        </div>
+                <a
+                  href={linkedin}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-ccf-muted hover:text-ccf-gold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  aria-label="Crescent Club of Finance LinkedIn (opens in a new tab)"
+                >
+                  <span>LinkedIn</span>
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                </a>
+              </div>
+
+              <p className="text-[11px] text-slate-500 pt-2">
+                {CCF_PUBLIC_INFO.campus}
+              </p>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

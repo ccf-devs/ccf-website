@@ -41,15 +41,22 @@ export default async function AdminEventDetailPage({ params }: PageProps) {
   const { id } = await params;
 
   let event: EventDetailData | null = null;
+  let media: any[] = [];
   let errorMessage: string | null = null;
 
   try {
-    const rawEvent = await prisma.event.findUnique({
-      where: { id },
-      include: {
-        content: true,
-      },
-    });
+    const [rawEvent, eventMedia] = await Promise.all([
+      prisma.event.findUnique({
+        where: { id },
+        include: {
+          content: true,
+        },
+      }),
+      prisma.media.findMany({
+        where: { eventId: id },
+        orderBy: { displayOrder: "asc" },
+      }),
+    ]);
 
     if (!rawEvent) {
       errorMessage = "Event record not found in database.";
@@ -58,12 +65,11 @@ export default async function AdminEventDetailPage({ params }: PageProps) {
         ...rawEvent,
         feeAmount: rawEvent.feeAmount ? Number(rawEvent.feeAmount) : null,
       };
+      media = eventMedia;
     }
   } catch (error) {
-    errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Failed to connect to database to retrieve event.";
+    console.error("[AdminEventDetailPage] Failed to load event:", error);
+    errorMessage = "Unable to reach database. Please try again.";
   }
 
   return (
@@ -109,7 +115,7 @@ export default async function AdminEventDetailPage({ params }: PageProps) {
           </div>
         </Card>
       ) : (
-        <EventDetailView event={event} />
+        <EventDetailView event={event} media={media} />
       )}
     </AdminShell>
   );
