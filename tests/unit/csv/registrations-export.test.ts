@@ -102,28 +102,36 @@ describe("Registration CSV Transformer Unit Tests", () => {
       const row = rows[0];
 
       // Columns check
-      expect(columns).toContain("Event");
       expect(columns).toContain("Registration Code");
-      expect(columns).toContain("Member Role");
-      expect(columns).toContain("Member Name");
-      expect(columns).toContain("Member Identifier / RRN");
-      expect(columns).toContain("Payment Status");
-      expect(columns).toContain("Payment Amount");
+      expect(columns).toContain("Registration Status");
+      expect(columns).toContain("Registered At");
+      expect(columns).toContain("Participant Name");
+      expect(columns).toContain("Participant Type");
+      expect(columns).toContain("RRN / Roll Number");
+      expect(columns).toContain("College");
       expect(columns).toContain("Academic Department");
+      expect(columns).toContain("Year");
+      expect(columns).toContain("Phone");
+      expect(columns).toContain("Payment Status");
+      expect(columns).toContain("Payment Method");
+      expect(columns).toContain("Payment Amount");
+      expect(columns).toContain("Payment Reference");
 
       // Shared & Individual values
       const codeIndex = columns.indexOf("Registration Code");
-      const nameIndex = columns.indexOf("Member Name");
-      const rrnIndex = columns.indexOf("Member Identifier / RRN");
-      const roleIndex = columns.indexOf("Member Role");
+      const statusIndex = columns.indexOf("Registration Status");
+      const nameIndex = columns.indexOf("Participant Name");
+      const typeIndex = columns.indexOf("Participant Type");
+      const rrnIndex = columns.indexOf("RRN / Roll Number");
       const payStatusIndex = columns.indexOf("Payment Status");
       const amountIndex = columns.indexOf("Payment Amount");
       const deptIndex = columns.indexOf("Academic Department");
 
       expect(row[codeIndex]).toBe("CCF-FIN-001");
+      expect(row[statusIndex]).toBe("ACTIVE");
       expect(row[nameIndex]).toBe("Rohith Y");
+      expect(row[typeIndex]).toBe("CRESCENT");
       expect(row[rrnIndex]).toBe("210011601001");
-      expect(row[roleIndex]).toBe("Individual");
       expect(row[payStatusIndex]).toBe("VERIFIED");
       expect(row[amountIndex]).toBe("150.00");
       expect(row[deptIndex]).toBe("Information Technology");
@@ -214,11 +222,11 @@ describe("Registration CSV Transformer Unit Tests", () => {
       const memberRow = rows[1];
 
       const teamNameIdx = columns.indexOf("Team Name");
-      const ordinalIdx = columns.indexOf("Member Ordinal");
+      const ordinalIdx = columns.indexOf("Member #");
       const roleIdx = columns.indexOf("Member Role");
       const memberNameIdx = columns.indexOf("Member Name");
-      const memberCollegeIdx = columns.indexOf("Member College");
-      const memberTypeIdx = columns.indexOf("Member Participant Type");
+      const memberCollegeIdx = columns.indexOf("College");
+      const memberTypeIdx = columns.indexOf("Participant Type");
       const regCodeIdx = columns.indexOf("Registration Code");
       const strategyIdx = columns.indexOf("Trading Strategy");
       const payAmountIdx = columns.indexOf("Payment Amount");

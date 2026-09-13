@@ -1,10 +1,10 @@
 import { AdminRegistrationView } from "@/lib/registrations/types";
-import { PaymentStatus, PaymentMethod } from "@prisma/client";
 
 export interface EventMetadata {
   id: string;
   name: string;
   slug: string;
+  registrationType?: "INDIVIDUAL" | "TEAM";
 }
 
 export interface FormFieldMetadata {
@@ -19,12 +19,93 @@ export interface TransformRegistrationsOptions {
   event: EventMetadata;
   registrations: AdminRegistrationView[];
   formFields?: FormFieldMetadata[];
+  isTeam?: boolean;
 }
 
 export interface TransformedCsvData {
   columns: string[];
   rows: (string | number | boolean | null)[][];
 }
+
+/**
+ * Standard CCF form keys that map directly to standard core CSV columns.
+ * These keys are excluded from trailing dynamic custom columns to avoid duplication.
+ */
+export const CORE_MAPPED_KEYS = new Set([
+  // Names
+  "participant_name",
+  "name",
+  "full_name",
+  // Participant Category / Type
+  "participant_type",
+  "participant_category",
+  // Identifiers / RRN
+  "crescent_rrn",
+  "external_roll_number",
+  "rrn",
+  "roll_number",
+  "identifier",
+  // College
+  "college_name",
+  "college",
+  // Academic Department
+  "academic_department",
+  "department",
+  // Academic Year
+  "academic_year",
+  "year",
+  "year_of_study",
+  // Phone / WhatsApp
+  "phone_number",
+  "phone",
+  "whatsapp_number",
+  "whatsapp",
+  // Team Name
+  "team_name",
+]);
+
+/**
+ * Clean core column order for INDIVIDUAL registrations (14 columns)
+ */
+export const INDIVIDUAL_CORE_COLUMNS = [
+  "Registration Code",
+  "Registration Status",
+  "Registered At",
+  "Participant Name",
+  "Participant Type",
+  "RRN / Roll Number",
+  "College",
+  "Academic Department",
+  "Year",
+  "Phone",
+  "Payment Status",
+  "Payment Method",
+  "Payment Amount",
+  "Payment Reference",
+] as const;
+
+/**
+ * Clean core column order for TEAM registrations (17 columns)
+ */
+export const TEAM_CORE_COLUMNS = [
+  "Registration Code",
+  "Registration Status",
+  "Registered At",
+  "Team Name",
+  "Member #",
+  "Member Role",
+  "Member Name",
+  "Participant Type",
+  "RRN / Roll Number",
+  "College",
+  "Phone",
+  "Academic Department",
+  "Year",
+  "Payment Status",
+  "Payment Method",
+  "Payment Amount",
+  "Payment Reference",
+] as const;
 
 /**
  * Formats dynamic field response values for readable CSV representation.
@@ -69,13 +150,15 @@ interface DynamicColumnDef {
  * all form versions present in the registrations or explicitly provided.
  *
  * Handles:
+ * - Exclusion of core mapped keys to prevent duplicate columns
  * - Preservation of displayOrder
  * - Stable union across multiple published form versions
- * - Disambiguation of conflicting labels with different keys
+ * - Disambiguation of conflicting labels with different keys or core column headers
  */
 export function resolveDynamicColumns(
   registrations: AdminRegistrationView[],
-  providedFields?: FormFieldMetadata[]
+  providedFields?: FormFieldMetadata[],
+  coreColumnNames?: Set<string>
 ): DynamicColumnDef[] {
   // Map of key -> { key, label, displayOrder }
   const fieldMap = new Map<string, { key: string; label: string; displayOrder: number }>();
@@ -83,12 +166,14 @@ export function resolveDynamicColumns(
   // 1. Ingest any explicitly provided form field metadata (from DB query)
   if (providedFields && providedFields.length > 0) {
     for (const field of providedFields) {
-      if (!fieldMap.has(field.key)) {
-        fieldMap.set(field.key, {
-          key: field.key,
-          label: field.label,
-          displayOrder: field.displayOrder ?? 9999,
-        });
+      if (!CORE_MAPPED_KEYS.has(field.key.toLowerCase())) {
+        if (!fieldMap.has(field.key)) {
+          fieldMap.set(field.key, {
+            key: field.key,
+            label: field.label,
+            displayOrder: field.displayOrder ?? 9999,
+          });
+        }
       }
     }
   }
@@ -97,12 +182,14 @@ export function resolveDynamicColumns(
   let fallbackOrder = 10000;
   for (const reg of registrations) {
     for (const resp of reg.responses) {
-      if (!fieldMap.has(resp.fieldKey)) {
-        fieldMap.set(resp.fieldKey, {
-          key: resp.fieldKey,
-          label: resp.fieldLabel || resp.fieldKey,
-          displayOrder: fallbackOrder++,
-        });
+      if (!CORE_MAPPED_KEYS.has(resp.fieldKey.toLowerCase())) {
+        if (!fieldMap.has(resp.fieldKey)) {
+          fieldMap.set(resp.fieldKey, {
+            key: resp.fieldKey,
+            label: resp.fieldLabel || resp.fieldKey,
+            displayOrder: fallbackOrder++,
+          });
+        }
       }
     }
   }
@@ -123,10 +210,11 @@ export function resolveDynamicColumns(
     return a.key.localeCompare(b.key);
   });
 
-  // Assign deterministic, unique headers (appending key if duplicate label exists)
+  // Assign deterministic, unique headers (appending key if duplicate label exists or clashes with core column names)
   return rawFields.map((field) => {
     const isDuplicate = (labelCounts.get(field.label) || 0) > 1;
-    const header = isDuplicate ? `${field.label} (${field.key})` : field.label;
+    const clashesWithCore = coreColumnNames?.has(field.label);
+    const header = isDuplicate || clashesWithCore ? `${field.label} (${field.key})` : field.label;
     return {
       key: field.key,
       header,
@@ -137,13 +225,14 @@ export function resolveDynamicColumns(
 
 /**
  * Transforms event registrations into tabular CSV columns and rows according to
- * CCF Handbook Phase 13A specification.
+ * CCF Phase 13 specification.
  *
  * Rules:
- * - Individual registration: exactly 1 CSV row.
- * - Team registration: exactly 1 CSV row per team member.
- * - Shared registration/team/payment columns repeated across all team member rows.
- * - Dynamic form fields unioned stably across form versions.
+ * - Individual registration: exactly 1 CSV row with 14 standard core columns + dynamic custom fields.
+ * - Team registration: exactly 1 CSV row per team member with 17 standard core columns + dynamic custom fields.
+ * - Shared registration/payment columns repeated across team member rows.
+ * - Core mapped fields (names, identifiers, department, year, phone) resolved cleanly into core columns.
+ * - Dynamic form fields unioned stably across form versions in displayOrder.
  * - Sorted primarily by registration createdAt ascending, team members sorted with leader first.
  */
 export function transformRegistrationsToCsvRows(
@@ -151,7 +240,15 @@ export function transformRegistrationsToCsvRows(
 ): TransformedCsvData {
   const { event, registrations, formFields } = options;
 
-  // 1. Sort registrations deterministically by createdAt ascending
+  // Determine if this is a team registration export
+  const isTeam =
+    options.isTeam ??
+    (options.event.registrationType ? options.event.registrationType === "TEAM" : undefined) ??
+    registrations.some(
+      (r) => r.registrationType === "TEAM" || Boolean(r.team && r.team.members.length > 0)
+    );
+
+  // 1. Sort registrations deterministically by createdAt ascending, then registrationCode ascending
   const sortedRegistrations = [...registrations].sort((a, b) => {
     const timeA = new Date(a.createdAt).getTime();
     const timeB = new Date(b.createdAt).getTime();
@@ -159,48 +256,20 @@ export function transformRegistrationsToCsvRows(
     return a.registrationCode.localeCompare(b.registrationCode);
   });
 
-  // 2. Resolve dynamic form columns
-  const dynamicColumns = resolveDynamicColumns(sortedRegistrations, formFields);
+  // 2. Select core columns based on registration structure
+  const coreColumns: string[] = isTeam
+    ? [...TEAM_CORE_COLUMNS]
+    : [...INDIVIDUAL_CORE_COLUMNS];
 
-  // 3. Define the deterministic column list
-  const standardEventColumns = [
-    "Event",
-    "Event Slug",
-    "Registration Code",
-    "Registration Status",
-    "Registration Type",
-    "Registration Date",
-  ];
-
-  const teamMemberColumns = [
-    "Team Name",
-    "Member Ordinal",
-    "Member Role",
-    "Member Name",
-    "Member Participant Type",
-    "Member Identifier / RRN",
-    "Member College",
-    "Member Phone",
-    "Member Academic Department",
-    "Member Year",
-  ];
-
-  const paymentColumns = [
-    "Payment Status",
-    "Payment Method",
-    "Payment Amount",
-    "Payment Currency",
-    "Payment User Reference",
-  ];
+  // 3. Resolve dynamic form columns (excluding core mapped keys)
+  const dynamicColumns = resolveDynamicColumns(
+    sortedRegistrations,
+    formFields,
+    new Set(coreColumns)
+  );
 
   const dynamicHeaders = dynamicColumns.map((col) => col.header);
-
-  const columns = [
-    ...standardEventColumns,
-    ...teamMemberColumns,
-    ...paymentColumns,
-    ...dynamicHeaders,
-  ];
+  const columns = [...coreColumns, ...dynamicHeaders];
 
   // 4. Construct rows
   const rows: (string | number | boolean | null)[][] = [];
@@ -209,94 +278,197 @@ export function transformRegistrationsToCsvRows(
     // Format payment fields
     const paymentStatus = reg.payment?.status || (event ? "FREE" : "N/A");
     const paymentMethod = reg.payment?.method || "";
-    const paymentAmount = reg.payment?.amount || "";
-    const paymentCurrency = reg.payment?.currency || "";
+    const paymentAmount =
+      reg.payment?.amount !== null && reg.payment?.amount !== undefined
+        ? String(reg.payment.amount)
+        : "";
     const paymentReference = reg.payment?.userReference || "";
 
-    // Map dynamic responses by fieldKey for O(1) row lookup
+    // Map responses by fieldKey for O(1) lookup
     const responseMap = new Map<string, { valueText: string | null; valueJson: any | null }>();
+    const responseByKey = new Map<string, { valueText: string | null; valueJson: any | null }>();
     for (const resp of reg.responses) {
       responseMap.set(resp.fieldKey, {
         valueText: resp.valueText,
         valueJson: resp.valueJson,
       });
+      responseByKey.set(resp.fieldKey.toLowerCase(), {
+        valueText: resp.valueText,
+        valueJson: resp.valueJson,
+      });
     }
 
+    function getResponseValue(candidateKeys: string[]): string {
+      for (const k of candidateKeys) {
+        const resp = responseByKey.get(k.toLowerCase());
+        if (resp) {
+          const val = formatFieldValueForCsv(resp.valueText, resp.valueJson);
+          if (val) return val;
+        }
+      }
+      return "";
+    }
+
+    // Dynamic field values
     const dynamicValues = dynamicColumns.map((col) => {
       const resp = responseMap.get(col.key);
       if (!resp) return "";
       return formatFieldValueForCsv(resp.valueText, resp.valueJson);
     });
 
-    const sharedEventValues = [
-      event.name,
-      event.slug,
-      reg.registrationCode,
-      reg.status,
-      reg.registrationType,
-      reg.createdAt,
-    ];
+    const registeredAt =
+      typeof reg.createdAt === "string"
+        ? reg.createdAt
+        : (reg.createdAt as unknown) instanceof Date
+        ? (reg.createdAt as unknown as Date).toISOString()
+        : String(reg.createdAt || "");
 
-    const sharedPaymentValues = [
-      paymentStatus,
-      paymentMethod,
-      paymentAmount,
-      paymentCurrency,
-      paymentReference,
-    ];
+    if (isTeam) {
+      const teamName = reg.team?.name || getResponseValue(["team_name"]) || "Unnamed Team";
 
-    if (reg.registrationType === "TEAM" && reg.team && reg.team.members.length > 0) {
-      // Sort team members: leader first, then by name or stable identifier
-      const members = [...reg.team.members].sort((m1, m2) => {
-        if (m1.isLeader && !m2.isLeader) return -1;
-        if (!m1.isLeader && m2.isLeader) return 1;
-        return m1.name.localeCompare(m2.name);
-      });
+      if (reg.team && reg.team.members.length > 0) {
+        // Sort team members: leader first, then by name ascending
+        const members = [...reg.team.members].sort((m1, m2) => {
+          if (m1.isLeader && !m2.isLeader) return -1;
+          if (!m1.isLeader && m2.isLeader) return 1;
+          return m1.name.localeCompare(m2.name);
+        });
 
-      // Emit exactly 1 CSV row per team member
-      members.forEach((member, index) => {
-        const memberOrdinal = index + 1;
-        const memberRole = member.isLeader ? "Leader" : "Member";
+        // Emit exactly 1 CSV row per team member
+        members.forEach((member, index) => {
+          const memberOrdinal = index + 1;
+          const memberRole = member.isLeader ? "Leader" : "Member";
+          const memberName = member.name;
+          const memberType = member.participantType;
+          const memberRrn = member.identifierNormalized || "";
+          const memberCollege =
+            member.collegeNormalized ||
+            (member.participantType === "CRESCENT"
+              ? "B.S. Abdur Rahman Crescent Institute of Science and Technology"
+              : "");
+          const memberPhone =
+            member.phone ||
+            (member.isLeader
+              ? getResponseValue(["phone_number", "whatsapp_number", "phone", "whatsapp"])
+              : "");
+          const memberDept =
+            member.academicDepartment ||
+            (member.isLeader
+              ? getResponseValue(["academic_department", "department", "degree", "department_degree"])
+              : "");
+          const memberYear =
+            member.year ||
+            (member.isLeader
+              ? getResponseValue(["academic_year", "year", "year_of_study"])
+              : "");
 
-        const memberValues = [
-          reg.team?.name || "Unnamed Team",
-          memberOrdinal,
-          memberRole,
-          member.name,
-          member.participantType,
-          member.identifierNormalized || "",
-          member.collegeNormalized || "",
-          member.phone || "",
-          member.academicDepartment || "",
-          member.year || "",
-        ];
+          rows.push([
+            reg.registrationCode,
+            reg.status,
+            registeredAt,
+            teamName,
+            memberOrdinal,
+            memberRole,
+            memberName,
+            memberType,
+            memberRrn,
+            memberCollege,
+            memberPhone,
+            memberDept,
+            memberYear,
+            paymentStatus,
+            paymentMethod,
+            paymentAmount,
+            paymentReference,
+            ...dynamicValues,
+          ]);
+        });
+      } else {
+        // Fallback for team registration without nested members array
+        const participantType =
+          reg.participantType ||
+          getResponseValue(["participant_type", "participant_category"]);
+        const college =
+          reg.collegeNormalized ||
+          getResponseValue(["college_name", "college"]) ||
+          (participantType === "CRESCENT"
+            ? "B.S. Abdur Rahman Crescent Institute of Science and Technology"
+            : "");
 
         rows.push([
-          ...sharedEventValues,
-          ...memberValues,
-          ...sharedPaymentValues,
+          reg.registrationCode,
+          reg.status,
+          registeredAt,
+          teamName,
+          1,
+          "Leader",
+          reg.participantName || getResponseValue(["full_name", "participant_name", "name"]),
+          participantType,
+          reg.identifierNormalized ||
+            getResponseValue(["crescent_rrn", "external_roll_number", "rrn", "roll_number", "identifier"]),
+          college,
+          getResponseValue(["phone_number", "whatsapp_number", "phone", "whatsapp"]),
+          getResponseValue(["academic_department", "department", "degree", "department_degree"]),
+          getResponseValue(["academic_year", "year", "year_of_study"]),
+          paymentStatus,
+          paymentMethod,
+          paymentAmount,
+          paymentReference,
           ...dynamicValues,
         ]);
-      });
+      }
     } else {
       // Individual registration: exactly 1 CSV row
-      const individualValues = [
-        "", // Team Name
-        1, // Member Ordinal
-        "Individual", // Member Role
-        reg.participantName,
-        reg.participantType,
-        reg.identifierNormalized || "",
-        reg.collegeNormalized || "",
-        "", // Phone (captured via dynamic fields if configured)
-        "", // Department
-        "", // Year
-      ];
+      const participantType =
+        reg.participantType ||
+        getResponseValue(["participant_type", "participant_category"]);
+
+      const participantName =
+        reg.participantName ||
+        getResponseValue(["full_name", "participant_name", "name"]);
+
+      const rrnRollNumber =
+        reg.identifierNormalized ||
+        getResponseValue(["crescent_rrn", "external_roll_number", "rrn", "roll_number", "identifier"]);
+
+      const college =
+        reg.collegeNormalized ||
+        getResponseValue(["college_name", "college"]) ||
+        (participantType === "CRESCENT"
+          ? "B.S. Abdur Rahman Crescent Institute of Science and Technology"
+          : "");
+
+      const department = getResponseValue([
+        "academic_department",
+        "department",
+        "degree",
+        "department_degree",
+      ]);
+
+      const year = getResponseValue(["academic_year", "year", "year_of_study"]);
+
+      const phone = getResponseValue([
+        "phone_number",
+        "whatsapp_number",
+        "phone",
+        "whatsapp",
+      ]);
 
       rows.push([
-        ...sharedEventValues,
-        ...individualValues,
-        ...sharedPaymentValues,
+        reg.registrationCode,
+        reg.status,
+        registeredAt,
+        participantName,
+        participantType,
+        rrnRollNumber,
+        college,
+        department,
+        year,
+        phone,
+        paymentStatus,
+        paymentMethod,
+        paymentAmount,
+        paymentReference,
         ...dynamicValues,
       ]);
     }

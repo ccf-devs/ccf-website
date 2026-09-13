@@ -195,8 +195,7 @@ describe("Admin Registrations Export API Unit Tests", () => {
       expect(buffer[2]).toBe(0xbf);
 
       const body = buffer.toString("utf-8");
-      expect(body).toContain("Event,Event Slug,Registration Code");
-      expect(body).toContain("Stock Pitch 2026");
+      expect(body).toContain("Registration Code,Registration Status,Registered At");
       expect(body).toContain("CCF-PITCH-001");
       expect(body).toContain("Rohith Y");
       expect(body).toContain("Academic Department");
