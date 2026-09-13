@@ -33,7 +33,6 @@ export const CCF_EVENT_CONTENTS: readonly CcfEventContent[] = [
     slug: "magnora-26",
     about:
       "Finance and business symposium organized by CCF at Crescent College.",
-    notes: EVENT_NOTICES.upcoming,
     media: [],
   },
   {

@@ -5,6 +5,7 @@ import {
   completeEventSchema,
   mergeEventWithPatch,
   isValidEventStatusTransition,
+  validateEventDateUpdates,
   ALLOWED_STATUS_TRANSITIONS,
 } from "@/lib/validation/event";
 import {
@@ -30,7 +31,7 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
     registrationMethod: RegistrationMethod.BUILT_IN,
     eligibilityCrescent: true,
     eligibilityExternal: true,
-    registrationOpensAt: "2026-09-01T00:00:00.000Z",
+    registrationOpensAt: "2026-10-01T00:00:00.000Z",
     registrationClosesAt: "2026-10-10T23:59:59.000Z",
     paymentMode: PaymentMode.FREE,
     descriptionRich: "Symposium on algorithmic finance and quantitative trading.",
@@ -95,7 +96,7 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
       const result = createEventSchema.safeParse({
         ...validBaseEvent,
         registrationOpensAt: "2026-10-10T00:00:00.000Z",
-        registrationClosesAt: "2026-09-01T00:00:00.000Z", // Earlier than opens!
+        registrationClosesAt: "2026-10-05T00:00:00.000Z", // Earlier than opens!
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -320,4 +321,157 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
       }
     });
   });
+
+  describe("D. Past Date Validation on Create and Edit (Issue 5)", () => {
+    const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
+    const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString();
+    const futureOpen = new Date(Date.now() + 10 * 86400000).toISOString();
+    const futureClose = new Date(Date.now() + 20 * 86400000).toISOString();
+    const futureStart = new Date(Date.now() + 30 * 86400000).toISOString();
+    const futureEnd = new Date(Date.now() + 31 * 86400000).toISOString();
+
+    const futureBaseEvent = {
+      ...validBaseEvent,
+      startsAt: futureStart,
+      endsAt: futureEnd,
+      registrationOpensAt: futureOpen,
+      registrationClosesAt: futureClose,
+    };
+
+    it("accepts event creation when all four date fields are in the future", () => {
+      const result = createEventSchema.safeParse(futureBaseEvent);
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects event creation when startsAt is in the past", () => {
+      const result = createEventSchema.safeParse({
+        ...futureBaseEvent,
+        startsAt: oneDayAgo,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes("startsAt"))).toBe(true);
+      }
+    });
+
+    it("rejects event creation when endsAt is in the past", () => {
+      const result = createEventSchema.safeParse({
+        ...futureBaseEvent,
+        endsAt: oneDayAgo,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes("endsAt"))).toBe(true);
+      }
+    });
+
+    it("rejects event creation when registrationOpensAt is in the past", () => {
+      const result = createEventSchema.safeParse({
+        ...futureBaseEvent,
+        registrationOpensAt: oneDayAgo,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes("registrationOpensAt"))).toBe(true);
+      }
+    });
+
+    it("rejects event creation when registrationClosesAt is in the past", () => {
+      const result = createEventSchema.safeParse({
+        ...futureBaseEvent,
+        registrationClosesAt: oneDayAgo,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes("registrationClosesAt"))).toBe(true);
+      }
+    });
+
+    it("blocks modifying date fields to a new past date during event editing", () => {
+      const existing = {
+        id: "evt-uuid-1",
+        startsAt: futureStart,
+        endsAt: futureEnd,
+        registrationOpensAt: futureOpen,
+        registrationClosesAt: futureClose,
+      };
+
+      // Trying to change startsAt to a past date
+      const checkStartsAt = validateEventDateUpdates(existing, { startsAt: oneDayAgo });
+      expect(checkStartsAt.valid).toBe(false);
+      expect(checkStartsAt.errors.startsAt).toContain("cannot be set to a past date");
+
+      // Trying to change endsAt to a past date
+      const checkEndsAt = validateEventDateUpdates(existing, { endsAt: oneDayAgo });
+      expect(checkEndsAt.valid).toBe(false);
+      expect(checkEndsAt.errors.endsAt).toContain("cannot be set to a past date");
+
+      // Trying to change registrationOpensAt to a past date
+      const checkRegOpens = validateEventDateUpdates(existing, { registrationOpensAt: oneDayAgo });
+      expect(checkRegOpens.valid).toBe(false);
+      expect(checkRegOpens.errors.registrationOpensAt).toContain("cannot be set to a past date");
+
+      // Trying to change registrationClosesAt to a past date
+      const checkRegCloses = validateEventDateUpdates(existing, { registrationClosesAt: oneDayAgo });
+      expect(checkRegCloses.valid).toBe(false);
+      expect(checkRegCloses.errors.registrationClosesAt).toContain("cannot be set to a past date");
+    });
+
+    it("permits editing historical events when existing past dates are not changed", () => {
+      const historicalExisting = {
+        id: "hist-1",
+        name: "FinRise 2025",
+        slug: "finrise-2025",
+        startsAt: twoWeeksAgo,
+        endsAt: oneWeekAgo,
+        registrationOpensAt: twoWeeksAgo,
+        registrationClosesAt: oneWeekAgo,
+        venue: "Old Hall",
+        capacityMode: EventCapacityMode.UNLIMITED,
+        registrationMode: RegistrationMode.NONE,
+        registrationMethod: RegistrationMethod.NONE,
+        paymentMode: PaymentMode.FREE,
+      };
+
+      // Editing non-date fields (e.g. venue name)
+      const patchNonDate = { venue: "Renovated Auditorium" };
+      const dateCheck = validateEventDateUpdates(historicalExisting, patchNonDate);
+      expect(dateCheck.valid).toBe(true);
+
+      // Sending unchanged dates in patch is also accepted
+      const patchUnchangedDates = {
+        venue: "Renovated Auditorium",
+        startsAt: twoWeeksAgo,
+        endsAt: oneWeekAgo,
+      };
+      const dateCheck2 = validateEventDateUpdates(historicalExisting, patchUnchangedDates);
+      expect(dateCheck2.valid).toBe(true);
+
+      // Merging and validating complete object succeeds without corrupting historical event
+      const merged = mergeEventWithPatch(historicalExisting, patchUnchangedDates);
+      const result = completeEventSchema.safeParse(merged);
+      expect(result.success).toBe(true);
+    });
+
+    it("permits updating existing events to valid future dates", () => {
+      const existing = {
+        id: "evt-uuid-2",
+        startsAt: futureStart,
+        endsAt: futureEnd,
+      };
+
+      const newFutureStart = new Date(Date.now() + 40 * 86400000).toISOString();
+      const newFutureEnd = new Date(Date.now() + 41 * 86400000).toISOString();
+
+      const patch = {
+        startsAt: newFutureStart,
+        endsAt: newFutureEnd,
+      };
+
+      const dateCheck = validateEventDateUpdates(existing, patch);
+      expect(dateCheck.valid).toBe(true);
+    });
+  });
 });
+

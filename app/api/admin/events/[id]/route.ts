@@ -6,6 +6,7 @@ import {
   completeEventSchema,
   mergeEventWithPatch,
   isValidEventStatusTransition,
+  validateEventDateUpdates,
   formatZodErrors,
 } from "@/lib/validation/event";
 import {
@@ -131,6 +132,18 @@ export async function PATCH(req: NextRequest, context: RouteParams) {
           { status: 400 }
         );
       }
+    }
+
+    // 3.5. Date update validation: ensure no date field is newly set to a past date
+    const dateCheck = validateEventDateUpdates(existing, patchData);
+    if (!dateCheck.valid) {
+      return NextResponse.json(
+        {
+          error: "Validation Error",
+          details: dateCheck.errors,
+        },
+        { status: 400 }
+      );
     }
 
     // 4. Merge existing event record with patch and validate COMPLETE resulting event (Correction 2)

@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -33,6 +34,8 @@ import {
 } from "@prisma/client";
 import {
   createEventSchema,
+  completeEventSchema,
+  validateEventDateUpdates,
   formatZodErrors,
   ALLOWED_STATUS_TRANSITIONS,
 } from "@/lib/validation/event";
@@ -88,6 +91,14 @@ function formatDateForInput(val: Date | string | null | undefined): string {
 
 export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
   const router = useRouter();
+
+  const [nowFormatted] = useState(() => formatDateForInput(new Date()));
+  const [mountTime] = useState(() => Date.now());
+  const isHistorical = (val: any) => {
+    if (!val) return false;
+    const d = typeof val === "string" ? new Date(val) : val;
+    return !isNaN(d.getTime()) && d.getTime() < mountTime;
+  };
 
   // Form state
   const [name, setName] = useState(initialData.name || "");
@@ -217,11 +228,26 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
     };
 
     // Client-side pre-validation
-    const validationResult = createEventSchema.safeParse(payload);
-    if (!validationResult.success) {
-      setErrors(formatZodErrors(validationResult.error));
-      setGlobalError("Please correct the highlighted validation issues before submitting.");
-      return;
+    if (mode === "create") {
+      const validationResult = createEventSchema.safeParse(payload);
+      if (!validationResult.success) {
+        setErrors(formatZodErrors(validationResult.error));
+        setGlobalError("Please correct the highlighted validation issues before submitting.");
+        return;
+      }
+    } else {
+      const dateCheck = validateEventDateUpdates(initialData, payload);
+      if (!dateCheck.valid) {
+        setErrors(dateCheck.errors);
+        setGlobalError("Please correct the highlighted validation issues before submitting.");
+        return;
+      }
+      const validationResult = completeEventSchema.safeParse(payload);
+      if (!validationResult.success) {
+        setErrors(formatZodErrors(validationResult.error));
+        setGlobalError("Please correct the highlighted validation issues before submitting.");
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -411,7 +437,13 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
               type="datetime-local"
               required
               value={startsAt}
-              min={mode === "create" ? formatDateForInput(new Date()) : undefined}
+              min={
+                mode === "create"
+                  ? nowFormatted
+                  : isHistorical(initialData.startsAt)
+                  ? formatDateForInput(initialData.startsAt)
+                  : nowFormatted
+              }
               onChange={(e) => setStartsAt(e.target.value)}
               aria-invalid={!!errors.startsAt}
             />
@@ -428,6 +460,13 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
               id="event-ends-at"
               type="datetime-local"
               value={endsAt}
+              min={
+                mode === "create"
+                  ? startsAt || nowFormatted
+                  : isHistorical(initialData.endsAt)
+                  ? formatDateForInput(initialData.endsAt)
+                  : startsAt || nowFormatted
+              }
               onChange={(e) => setEndsAt(e.target.value)}
               aria-invalid={!!errors.endsAt}
             />
@@ -557,6 +596,13 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
               id="event-reg-opens-at"
               type="datetime-local"
               value={registrationOpensAt}
+              min={
+                mode === "create"
+                  ? nowFormatted
+                  : isHistorical(initialData.registrationOpensAt)
+                  ? formatDateForInput(initialData.registrationOpensAt)
+                  : nowFormatted
+              }
               onChange={(e) => setRegistrationOpensAt(e.target.value)}
               aria-invalid={!!errors.registrationOpensAt}
             />
@@ -573,6 +619,13 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
               id="event-reg-closes-at"
               type="datetime-local"
               value={registrationClosesAt}
+              min={
+                mode === "create"
+                  ? registrationOpensAt || nowFormatted
+                  : isHistorical(initialData.registrationClosesAt)
+                  ? formatDateForInput(initialData.registrationClosesAt)
+                  : registrationOpensAt || nowFormatted
+              }
               onChange={(e) => setRegistrationClosesAt(e.target.value)}
               aria-invalid={!!errors.registrationClosesAt}
             />
@@ -823,66 +876,66 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
         <CardContent className="p-0 pt-2 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="event-description-rich">
-              Overview & Description (`description_rich`)
+              Overview & Description (description_rich)
             </Label>
-            <Textarea
+            <RichTextEditor
               id="event-description-rich"
-              rows={3}
+              rows={4}
               placeholder="Detailed introduction to the symposium, objectives, and schedule..."
               value={descriptionRich}
-              onChange={(e) => setDescriptionRich(e.target.value)}
+              onChange={setDescriptionRich}
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="event-rules-rich">
-              Competition Rules (`rules_rich`)
+              Competition Rules (rules_rich)
             </Label>
-            <Textarea
+            <RichTextEditor
               id="event-rules-rich"
-              rows={2}
+              rows={3}
               placeholder="Official competition rules, rounds, code of conduct..."
               value={rulesRich}
-              onChange={(e) => setRulesRich(e.target.value)}
+              onChange={setRulesRich}
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="event-instructions-rich">
-              Participant Instructions (`instructions_rich`)
+              Participant Instructions (instructions_rich)
             </Label>
-            <Textarea
+            <RichTextEditor
               id="event-instructions-rich"
-              rows={2}
+              rows={3}
               placeholder="Check-in requirements, dress code, materials to bring..."
               value={instructionsRich}
-              onChange={(e) => setInstructionsRich(e.target.value)}
+              onChange={setInstructionsRich}
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="event-eligibility-rich">
-              Eligibility Details (`eligibility_rich`)
+              Eligibility Details (eligibility_rich)
             </Label>
-            <Textarea
+            <RichTextEditor
               id="event-eligibility-rich"
-              rows={2}
+              rows={3}
               placeholder="Specific year restrictions, departmental requirements, or prerequisites..."
               value={eligibilityRich}
-              onChange={(e) => setEligibilityRich(e.target.value)}
+              onChange={setEligibilityRich}
             />
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="event-notes-rich">
-              Administrative & Operational Notes (`notes_rich`)
+              Administrative & Operational Notes (notes_rich)
             </Label>
-            <Textarea
+            <RichTextEditor
               id="event-notes-rich"
-              rows={2}
+              rows={3}
               placeholder="Internal operational notes for club executives and coordinators..."
               value={notesRich}
-              onChange={(e) => setNotesRich(e.target.value)}
+              onChange={setNotesRich}
             />
           </div>
         </CardContent>

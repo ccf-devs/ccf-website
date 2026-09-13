@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import {
   CCF_EVENTS,
   getEventBySlug,
+  type CcfEvent,
 } from "@/lib/data/events";
 import {
   CCF_EVENT_CONTENTS,
@@ -132,6 +133,27 @@ describe("Event Detail Page & Showcase Verification (Phase 5 Task 5 Revision)", 
       expect(html).toContain("Edition: 2026");
     });
 
+    it("renders rich-text formatting in EventDetailHero description instead of exposing raw markdown syntax", () => {
+      const markdownEvent: CcfEvent = {
+        ...CCF_EVENTS[0],
+        description: "Featuring **Magnora 2026** with *special keynote* and [Details](https://example.com/info).",
+      };
+      const html = renderToStaticMarkup(<EventDetailHero event={markdownEvent} />);
+
+      // Formatted elements should be present
+      expect(html).toContain("<strong");
+      expect(html).toContain("Magnora 2026");
+      expect(html).toContain("<em");
+      expect(html).toContain("special keynote");
+      expect(html).toContain("<a");
+      expect(html).toContain('href="https://example.com/info"');
+
+      // Raw markdown tokens should NOT be exposed
+      expect(html).not.toContain("**Magnora 2026**");
+      expect(html).not.toContain("*special keynote*");
+      expect(html).not.toContain("[Details](https://example.com/info)");
+    });
+
     it("renders EventDetails with four key metadata cards for confirmed events", () => {
       const finrise = CCF_EVENTS[1];
       const html = renderToStaticMarkup(<EventDetails event={finrise} />);
@@ -173,15 +195,15 @@ describe("Event Detail Page & Showcase Verification (Phase 5 Task 5 Revision)", 
       expect(html).not.toContain("Edition");
     });
 
-    it("renders EventContent for upcoming event with approved notice and empty highlights state", () => {
+    it("renders EventContent for upcoming event without misleading pending details notice", () => {
       const magnora = CCF_EVENTS[0];
       const content = getEventContentBySlug("magnora-26");
       const html = renderToStaticMarkup(
         <EventContent event={magnora} content={content} />
       );
 
-      // Approved upcoming notice
-      expect(html).toContain(
+      // Misleading unconditional upcoming notice is removed
+      expect(html).not.toContain(
         "Additional event details will be published as they are confirmed."
       );
       expect(html).not.toContain(

@@ -119,7 +119,7 @@ describe("Phase 7: FormRenderer Component Tests", () => {
     expect(html.toLowerCase()).toContain("novalidate");
   });
 
-  it("renders visible common fields and system badge", () => {
+  it("renders visible common fields without internal system badges", () => {
     const html = renderToStaticMarkup(
       <FormRenderer
         fields={sampleFields}
@@ -132,8 +132,9 @@ describe("Phase 7: FormRenderer Component Tests", () => {
     expect(html).toContain("Full Name");
     expect(html).toContain("Additional Notes");
     expect(html).toContain("Student ID Card Photo");
-    // System badge for participant_type
-    expect(html).toContain("System");
+    // Ensure internal system badge is NOT rendered for participants
+    expect(html).not.toContain(">System<");
+    expect(html).not.toContain(">SYSTEM<");
     // Help text
     expect(html).toContain("Select whether you are from Crescent or another college");
   });
@@ -207,4 +208,36 @@ describe("Phase 7: FormRenderer Component Tests", () => {
 
     expect(html).toContain("disabled");
   });
+
+  it("does not render SYSTEM or internal field metadata badges by default for participants", () => {
+    const html = renderToStaticMarkup(
+      <FormRenderer
+        fields={sampleFields}
+        values={{ participant_type: "CRESCENT" }}
+        onChange={() => {}}
+      />
+    );
+
+    expect(html).not.toContain(">System<");
+    expect(html).not.toContain(">SYSTEM<");
+    expect(html).not.toContain(">Custom<");
+    expect(html).not.toContain(">CUSTOM<");
+    // Ensure human labels are present
+    expect(html).toContain("Participant Classification");
+    expect(html).toContain("Full Name");
+  });
+
+  it("renders SYSTEM badge only when showSystemBadge is explicitly set to true", () => {
+    const html = renderToStaticMarkup(
+      <FormRenderer
+        fields={sampleFields}
+        values={{ participant_type: "CRESCENT" }}
+        showSystemBadge={true}
+        onChange={() => {}}
+      />
+    );
+
+    expect(html).toContain(">System<");
+  });
 });
+

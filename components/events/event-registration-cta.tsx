@@ -59,7 +59,7 @@ export function EventRegistrationCta({ event }: EventRegistrationCtaProps) {
                   Registration is Open
                 </h2>
                 <p className="type-body text-xs md:text-sm text-ccf-muted leading-relaxed">
-                  Secure your participation for {event.name}. Online registration is currently active through the official CCF registration engine.
+                  Registration is open. Reserve your spot for {event.name}.
                 </p>
               </div>
 

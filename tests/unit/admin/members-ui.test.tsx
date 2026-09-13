@@ -206,4 +206,64 @@ describe("Admin Members UI Unit Tests", () => {
       expect(html).toContain("Go to Departments");
     });
   });
+
+  /* -------------------------------------------------------------------------- */
+  /* 3. Member Profile Photo Candidate Filtering                                 */
+  /* -------------------------------------------------------------------------- */
+  describe("3. Member Profile Photo Candidate Filtering", () => {
+    it("filters media candidates to only include media where eventId is null", () => {
+      const mockMediaAssets = [
+        {
+          id: "general-photo-1",
+          objectKey: "general/members/remi.jpg",
+          altText: "Remi Portrait",
+          mimeType: "image/jpeg",
+          eventId: null,
+        },
+        {
+          id: "general-photo-2",
+          objectKey: "general/assets/logo.png",
+          altText: "Club Logo",
+          mimeType: "image/png",
+          eventId: null,
+        },
+        {
+          id: "event-photo-1",
+          objectKey: "events/magnora-26/symposium.jpg",
+          altText: "Magnora Presentation",
+          mimeType: "image/jpeg",
+          eventId: "event-uuid-1",
+          event: { name: "Magnora'26" },
+        },
+        {
+          id: "pdf-doc-1",
+          objectKey: "docs/charter.pdf",
+          altText: "Club Charter",
+          mimeType: "application/pdf",
+          eventId: null,
+        },
+      ];
+
+      // Simulate the exact filtering logic used in MemberDialog
+      const filterCandidates = (mediaList: any[], initialPhotoId: string | null = null) => {
+        return mediaList.filter(
+          (m) =>
+            m.mimeType &&
+            m.mimeType.startsWith("image/") &&
+            (m.eventId === null || m.eventId === undefined || m.id === initialPhotoId)
+        );
+      };
+
+      const candidates = filterCandidates(mockMediaAssets);
+      expect(candidates).toHaveLength(2);
+      expect(candidates.map((c) => c.id)).toEqual(["general-photo-1", "general-photo-2"]);
+      expect(candidates.find((c) => c.id === "event-photo-1")).toBeUndefined();
+      expect(candidates.find((c) => c.id === "pdf-doc-1")).toBeUndefined();
+
+      // If an existing member previously had an event photo assigned, it remains selectable
+      const candidatesWithAssignedEventPhoto = filterCandidates(mockMediaAssets, "event-photo-1");
+      expect(candidatesWithAssignedEventPhoto.find((c) => c.id === "event-photo-1")).toBeDefined();
+    });
+  });
 });
+

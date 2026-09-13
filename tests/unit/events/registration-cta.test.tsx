@@ -28,6 +28,10 @@ describe("EventRegistrationCta Component Unit Tests", () => {
 
       const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
       expect(html).toContain("Registration is Open");
+      expect(html).toContain("Registration is open. Reserve your spot for Finance Symposium 2026.");
+      expect(html).not.toContain("registration engine");
+      expect(html).not.toContain("backend");
+      expect(html).not.toContain("infrastructure");
       expect(html).toContain("Register Now");
       expect(html).toContain('href="/events/symposium-2026/register"');
       expect(html).not.toContain("Registration Closed");

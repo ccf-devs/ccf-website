@@ -21,6 +21,7 @@ export interface FormRendererProps {
   submitLabel?: string;
   className?: string;
   readOnly?: boolean;
+  showSystemBadge?: boolean;
   children?: React.ReactNode;
 }
 
@@ -39,6 +40,7 @@ export function FormRenderer({
   submitLabel = "Submit Registration",
   className,
   readOnly = false,
+  showSystemBadge = false,
   children,
 }: FormRendererProps) {
   // Sort fields by displayOrder
@@ -68,7 +70,7 @@ export function FormRenderer({
               <Label htmlFor={field.key} required={field.required}>
                 {field.label}
               </Label>
-              {field.config.isSystem && (
+              {showSystemBadge && field.config.isSystem && (
                 <span className="text-[10px] uppercase font-mono tracking-wider text-ccf-gold/70">
                   System
                 </span>

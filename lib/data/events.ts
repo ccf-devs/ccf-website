@@ -23,6 +23,13 @@ export interface CcfEvent {
   registrationOpensAt?: string | null;
   registrationClosesAt?: string | null;
   externalRegistrationUrl?: string | null;
+  content?: {
+    descriptionRich?: string | null;
+    rulesRich?: string | null;
+    instructionsRich?: string | null;
+    eligibilityRich?: string | null;
+    notesRich?: string | null;
+  } | null;
 }
 
 /**
@@ -171,6 +178,15 @@ export function toPublicEventSummary(dbEvent: {
       ? new Date(dbEvent.registrationClosesAt).toISOString()
       : null,
     externalRegistrationUrl,
+    content: dbEvent.content
+      ? {
+          descriptionRich: dbEvent.content.descriptionRich,
+          rulesRich: dbEvent.content.rulesRich,
+          instructionsRich: dbEvent.content.instructionsRich,
+          eligibilityRich: dbEvent.content.eligibilityRich,
+          notesRich: dbEvent.content.notesRich,
+        }
+      : null,
   };
 }
 

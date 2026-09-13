@@ -118,7 +118,10 @@ function MemberDialogInner({
         if (!isMounted) return;
         if (Array.isArray(data.media)) {
           const images = data.media.filter(
-            (m: any) => m.mimeType && m.mimeType.startsWith("image/")
+            (m: any) =>
+              m.mimeType &&
+              m.mimeType.startsWith("image/") &&
+              (m.eventId === null || m.eventId === undefined || m.id === initialPhotoId)
           );
           setAvailableMedia(images);
 

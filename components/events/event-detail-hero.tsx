@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { FadeIn } from "@/components/motion/fade-in";
 import { CCF_EYEBROW } from "@/components/site/navigation-data";
 import { type CcfEvent } from "@/lib/data/events";
+import { RichTextView } from "@/components/ui/rich-text-view";
 
 interface EventDetailHeroProps {
   event: CcfEvent;
@@ -74,11 +75,16 @@ export function EventDetailHero({ event, coverImageUrl }: EventDetailHeroProps) 
           </FadeIn>
 
           {/* Subtitle / Description */}
-          <FadeIn delay={0.3}>
-            <p className="type-body-lg text-ccf-muted leading-relaxed max-w-2xl">
-              {event.description}
-            </p>
-          </FadeIn>
+          {event.description && (
+            <FadeIn delay={0.3}>
+              <div className="type-body-lg text-ccf-muted leading-relaxed max-w-2xl">
+                <RichTextView
+                  content={event.description}
+                  className="type-body-lg text-ccf-muted leading-relaxed"
+                />
+              </div>
+            </FadeIn>
+          )}
         </div>
       </Container>
     </section>

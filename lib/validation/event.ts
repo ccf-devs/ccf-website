@@ -308,9 +308,89 @@ export const completeEventSchema = applyCrossFieldEventRules(z.object(eventBaseF
 export type CompleteEventInput = z.infer<typeof completeEventSchema>;
 
 /**
- * Schema for creating a new event.
+ * Helper to validate that date fields are not set to past timestamps.
+ * Allows a 60-second grace threshold to tolerate minor clock drift.
  */
-export const createEventSchema = completeEventSchema;
+export function validateEventDateUpdates(
+  existing: Record<string, any>,
+  patch: Record<string, any>
+): { valid: boolean; errors: Record<string, string> } {
+  const errors: Record<string, string> = {};
+  const threshold = Date.now() - 60_000;
+
+  const checkField = (
+    field: "startsAt" | "endsAt" | "registrationOpensAt" | "registrationClosesAt",
+    label: string
+  ) => {
+    if (patch[field] !== undefined && patch[field] !== null && patch[field] !== "") {
+      const newDate = new Date(patch[field]);
+      if (!isNaN(newDate.getTime())) {
+        const newTime = newDate.getTime();
+        const existingVal = existing[field];
+        const existingDate = existingVal ? new Date(existingVal) : null;
+        const existingTime =
+          existingDate && !isNaN(existingDate.getTime())
+            ? existingDate.getTime()
+            : null;
+
+        // If the date is changed or newly added, it cannot be in the past
+        if (existingTime === null || newTime !== existingTime) {
+          if (newTime < threshold) {
+            errors[field] = `${label} cannot be set to a past date and time`;
+          }
+        }
+      }
+    }
+  };
+
+  checkField("startsAt", "Event start date");
+  checkField("endsAt", "Event end date");
+  checkField("registrationOpensAt", "Registration opening date");
+  checkField("registrationClosesAt", "Registration closing date");
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+/**
+ * Schema for creating a new event.
+ * Enforces that all four date/time fields cannot be in the past.
+ */
+export const createEventSchema = completeEventSchema
+  .refine(
+    (data) => !data.startsAt || data.startsAt.getTime() >= Date.now() - 60_000,
+    {
+      message: "Event start date cannot be in the past",
+      path: ["startsAt"],
+    }
+  )
+  .refine(
+    (data) => !data.endsAt || data.endsAt.getTime() >= Date.now() - 60_000,
+    {
+      message: "Event end date cannot be in the past",
+      path: ["endsAt"],
+    }
+  )
+  .refine(
+    (data) =>
+      !data.registrationOpensAt ||
+      data.registrationOpensAt.getTime() >= Date.now() - 60_000,
+    {
+      message: "Registration opening date cannot be in the past",
+      path: ["registrationOpensAt"],
+    }
+  )
+  .refine(
+    (data) =>
+      !data.registrationClosesAt ||
+      data.registrationClosesAt.getTime() >= Date.now() - 60_000,
+    {
+      message: "Registration closing date cannot be in the past",
+      path: ["registrationClosesAt"],
+    }
+  );
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 
