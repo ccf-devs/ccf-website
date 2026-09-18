@@ -129,7 +129,7 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
   describe("CCF Logo Presentation & Circular Treatment", () => {
     it("renders CcfLogo using PNG filling the circular frame cleanly without square background", () => {
       const html = renderToStaticMarkup(<CcfLogo size="lg" priority />);
-      expect(html).toContain("ccf_logo_edited.png");
+      expect(html).toContain("ccf_logo.webp");
       expect(html).toContain("rounded-full");
       expect(html).toContain("overflow-hidden");
       expect(html).toContain("border-ccf-gold/30");
@@ -154,12 +154,12 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
 
     it("renders circular logo treatment consistently in AboutHero and Header", () => {
       const heroHtml = renderToStaticMarkup(<AboutHero />);
-      expect(heroHtml).toContain("ccf_logo_edited.png");
+      expect(heroHtml).toContain("ccf_logo.webp");
       expect(heroHtml).toContain("overflow-hidden");
       expect(heroHtml).toContain("rounded-full");
 
       const headerHtml = renderToStaticMarkup(<Header />);
-      expect(headerHtml).toContain("ccf_logo_edited.png");
+      expect(headerHtml).toContain("ccf_logo.webp");
       expect(headerHtml).toContain("overflow-hidden");
       expect(headerHtml).toContain("rounded-full");
     });

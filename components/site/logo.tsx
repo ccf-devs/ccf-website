@@ -42,7 +42,7 @@ export function CcfLogo({ size = "md", className, priority = false }: CcfLogoPro
       )}
     >
       <Image
-        src="/images/ccf_logo_edited.png"
+        src="/images/ccf_logo.webp"
         alt="Crescent Club of Finance Emblem"
         width={config.dimension}
         height={config.dimension}

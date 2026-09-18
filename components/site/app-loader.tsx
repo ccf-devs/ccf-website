@@ -21,7 +21,7 @@ const STORAGE_KEY = "ccf_initial_loaded";
  * - AnimatePresence remains mounted while the child exits with transition={{ duration: 0.45 }}.
  * - Fires once per browser session via sessionStorage.
  * - Skips immediately for prefers-reduced-motion: reduce.
- * - Uses the canonical CCF logo asset (/images/ccf_logo_edited.png).
+ * - Uses the canonical CCF logo asset (/images/ccf_logo.webp).
  */
 export function AppLoader() {
   const [mounted, setMounted] = useState(false);
@@ -122,7 +122,7 @@ export function AppLoader() {
               className="relative h-20 w-20 md:h-24 md:w-24 rounded-full border border-ccf-gold/40 p-1 shadow-xl bg-[#071426] overflow-hidden"
             >
               <Image
-                src="/images/ccf_logo_edited.png"
+                src="/images/ccf_logo.webp"
                 alt="CCF Emblem"
                 width={96}
                 height={96}

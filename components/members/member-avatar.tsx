@@ -90,7 +90,7 @@ export function MemberAvatar({
         >
           <div className="relative h-3/5 w-3/5 rounded-full overflow-hidden opacity-85 border border-ccf-navy/20">
             <Image
-              src="/images/ccf_logo_edited.png"
+              src="/images/ccf_logo.webp"
               alt=""
               width={64}
               height={64}

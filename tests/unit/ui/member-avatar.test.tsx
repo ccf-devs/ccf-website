@@ -32,7 +32,7 @@ describe("MemberAvatar Component with Coin Reveal", () => {
       <MemberAvatar name="Jane Smith" initials="JS" />
     );
 
-    expect(html).toContain("ccf_logo_edited.png");
+    expect(html).toContain("ccf_logo.webp");
   });
 
   it("renders gold coin with darker CCF gold styling", () => {
