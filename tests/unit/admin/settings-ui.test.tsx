@@ -225,6 +225,7 @@ describe("Phase 14 — Admin Settings & Security UI Unit Tests", () => {
       expect(html).toContain("Enabled");
       expect(html).toContain("Authenticator actively protects your account");
       expect(html).toContain("Reconfigure Authenticator");
+      expect(html).toContain("Verified on 2026-09-08");
     });
 
     it("renders empty recovery codes count when 0 codes exist", () => {

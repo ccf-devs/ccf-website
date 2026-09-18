@@ -26,6 +26,23 @@ import {
 } from "lucide-react";
 import { formatAdminRole } from "@/components/admin";
 
+/**
+ * Deterministically formats a date string to YYYY-MM-DD (UTC)
+ * to prevent React hydration mismatches between server and client browser locales.
+ */
+function formatDeterministicDate(dateInput: string): string {
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return dateInput.slice(0, 10);
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  } catch {
+    return dateInput.slice(0, 10);
+  }
+}
+
 export interface SecuritySettingsProps {
   admin: {
     id: string;
@@ -298,7 +315,7 @@ export function SecuritySettings({
                   You can sign in using your 6-digit authenticator code on the fallback login page.
                   {totpUpdatedAt && (
                     <span className="block text-[11px] text-ccf-muted pt-1">
-                      Verified on {new Date(totpUpdatedAt).toLocaleDateString()}
+                      Verified on {formatDeterministicDate(totpUpdatedAt)}
                     </span>
                   )}
                 </p>
