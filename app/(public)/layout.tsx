@@ -2,6 +2,8 @@ import React from "react";
 import { PublicShell } from "@/components/site/public-shell";
 import { getPublicContactSettings } from "@/lib/site-settings/service";
 
+export const dynamic = "force-dynamic";
+
 export default async function PublicLayout({
   children,
 }: {
