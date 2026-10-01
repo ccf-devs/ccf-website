@@ -31,7 +31,7 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
     registrationMethod: RegistrationMethod.BUILT_IN,
     eligibilityCrescent: true,
     eligibilityExternal: true,
-    registrationOpensAt: "2026-10-01T00:00:00.000Z",
+    registrationOpensAt: "2026-10-05T00:00:00.000Z",
     registrationClosesAt: "2026-10-10T23:59:59.000Z",
     paymentMode: PaymentMode.FREE,
     descriptionRich: "Symposium on algorithmic finance and quantitative trading.",

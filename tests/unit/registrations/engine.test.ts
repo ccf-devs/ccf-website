@@ -374,9 +374,30 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
               status: EventStatus.PUBLISHED,
             },
           ]),
+          registration: {
+            create: vi.fn().mockResolvedValue({
+              id: "reg-uuid-1",
+              eventId: "event-uuid-1",
+              formVersionId: "fv-uuid-1",
+              registrationCode: "CCF-MAGNORA2-A1B2C3D4",
+              participantName: "John",
+              participantType: ParticipantType.CRESCENT,
+              status: "ACTIVE",
+              registrationType: "INDIVIDUAL",
+              createdAt: new Date(),
+            }),
+          },
+          registrationResponse: {
+            createMany: vi.fn().mockResolvedValue({ count: 1 }),
+            create: vi.fn().mockResolvedValue({ id: "resp-1" }),
+          },
           eventParticipant: {
             count: vi.fn().mockResolvedValue(10),
-            findFirst: vi.fn().mockResolvedValue({ id: "existing-ep" }), // duplicate found!
+            create: vi.fn().mockRejectedValue({
+              code: "P2002",
+              name: "PrismaClientKnownRequestError",
+              meta: { target: ["ep_crescent_unique"] },
+            }),
           },
         });
       });
@@ -406,9 +427,30 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
               status: EventStatus.PUBLISHED,
             },
           ]),
+          registration: {
+            create: vi.fn().mockResolvedValue({
+              id: "reg-uuid-1",
+              eventId: "event-uuid-1",
+              formVersionId: "fv-uuid-1",
+              registrationCode: "CCF-MAGNORA2-A1B2C3D4",
+              participantName: "Jane",
+              participantType: ParticipantType.EXTERNAL,
+              status: "ACTIVE",
+              registrationType: "INDIVIDUAL",
+              createdAt: new Date(),
+            }),
+          },
+          registrationResponse: {
+            createMany: vi.fn().mockResolvedValue({ count: 1 }),
+            create: vi.fn().mockResolvedValue({ id: "resp-1" }),
+          },
           eventParticipant: {
             count: vi.fn().mockResolvedValue(10),
-            findFirst: vi.fn().mockResolvedValue({ id: "existing-ep-external" }),
+            create: vi.fn().mockRejectedValue({
+              code: "P2002",
+              name: "PrismaClientKnownRequestError",
+              meta: { target: ["ep_external_unique"] },
+            }),
           },
         });
       });

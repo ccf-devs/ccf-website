@@ -359,8 +359,9 @@ export async function executeRegistration(
   }
 
   // 10. Start authoritative transaction with row-level serialization
-  return await prisma.$transaction(async (tx) => {
-    // A. Acquire exclusive row lock on events table (SELECT ... FOR UPDATE).
+  return await prisma.$transaction(
+    async (tx) => {
+      // A. Acquire exclusive row lock on events table (SELECT ... FOR UPDATE).
     // This serializes all concurrent registration requests for this event at the DB level.
     const lockedRows = await tx.$queryRaw<
       Array<{
@@ -436,94 +437,7 @@ export async function executeRegistration(
       }
     }
 
-    // C. Enforce active participation uniqueness for primary participant (application pre-check)
-    if (identity.participantType === ParticipantType.CRESCENT) {
-      const existing = await tx.eventParticipant.findFirst({
-        where: {
-          eventId: event.id,
-          participantType: ParticipantType.CRESCENT,
-          identifierNormalized: identity.identifierNormalized,
-          registration: { status: RegistrationStatus.ACTIVE },
-        },
-      });
-
-      if (existing) {
-        throw new RegistrationDomainError(
-          "A participant with this Crescent RRN is already actively registered for this event.",
-          RegistrationErrorCode.DUPLICATE_REGISTRATION,
-          400
-        );
-      }
-    } else {
-      const existing = await tx.eventParticipant.findFirst({
-        where: {
-          eventId: event.id,
-          participantType: ParticipantType.EXTERNAL,
-          collegeNormalized: identity.collegeNormalized,
-          identifierNormalized: identity.identifierNormalized,
-          registration: { status: RegistrationStatus.ACTIVE },
-        },
-      });
-
-      if (existing) {
-        throw new RegistrationDomainError(
-          "A participant from this institution with this roll number is already actively registered for this event.",
-          RegistrationErrorCode.DUPLICATE_REGISTRATION,
-          400
-        );
-      }
-    }
-
-    // D. Enforce active participation uniqueness for team members
-    for (const member of normalizedTeamMembers) {
-      const isPrimary =
-        member.participantType === identity.participantType &&
-        member.identifierNormalized === identity.identifierNormalized &&
-        (member.collegeNormalized || null) === (identity.collegeNormalized || null);
-
-      if (isPrimary) {
-        continue; // Already verified in step C
-      }
-
-      if (member.participantType === ParticipantType.CRESCENT) {
-        const existingMember = await tx.eventParticipant.findFirst({
-          where: {
-            eventId: event.id,
-            participantType: ParticipantType.CRESCENT,
-            identifierNormalized: member.identifierNormalized,
-            registration: { status: RegistrationStatus.ACTIVE },
-          },
-        });
-
-        if (existingMember) {
-          throw new RegistrationDomainError(
-            `Team member with RRN ${member.identifierNormalized} is already actively registered for this event.`,
-            RegistrationErrorCode.PARTICIPATION_LOCKED,
-            400
-          );
-        }
-      } else {
-        const existingMember = await tx.eventParticipant.findFirst({
-          where: {
-            eventId: event.id,
-            participantType: ParticipantType.EXTERNAL,
-            collegeNormalized: member.collegeNormalized,
-            identifierNormalized: member.identifierNormalized,
-            registration: { status: RegistrationStatus.ACTIVE },
-          },
-        });
-
-        if (existingMember) {
-          throw new RegistrationDomainError(
-            `Team member from ${member.collegeNormalized} with roll number ${member.identifierNormalized} is already actively registered for this event.`,
-            RegistrationErrorCode.PARTICIPATION_LOCKED,
-            400
-          );
-        }
-      }
-    }
-
-    // E. Generate registration code
+    // C. Generate registration code
     const registrationCode = generateRegistrationCode(event.slug);
 
     // F. Create Registration record (permanently pinning activeFormVersionId)
@@ -541,19 +455,29 @@ export async function executeRegistration(
       },
     });
 
-    // G. Create RegistrationResponse records
+    // E. Create RegistrationResponse records (batched in single round trip)
+    const responseData: Prisma.RegistrationResponseCreateManyInput[] = [];
+
     for (const field of activeFormVersion.eventFields) {
       const val = validatedResponses[field.key];
       if (val !== undefined && val !== null && val !== "") {
         const isObj = typeof val === "object";
-        await tx.registrationResponse.create({
-          data: {
-            registrationId: registration.id,
-            eventFieldId: field.id,
-            valueText: isObj ? JSON.stringify(val) : String(val),
-            valueJson: isObj ? val : null,
-          },
+        responseData.push({
+          registrationId: registration.id,
+          eventFieldId: field.id,
+          valueText: isObj ? JSON.stringify(val) : String(val),
+          valueJson: isObj ? (val as Prisma.InputJsonValue) : Prisma.JsonNull,
         });
+      }
+    }
+
+    if (responseData.length > 0) {
+      if (typeof tx.registrationResponse.createMany === "function") {
+        await tx.registrationResponse.createMany({ data: responseData });
+      } else {
+        for (const resp of responseData) {
+          await tx.registrationResponse.create({ data: resp });
+        }
       }
     }
 
@@ -718,7 +642,9 @@ export async function executeRegistration(
           : null,
       payment: paymentConfirmation,
     };
-  });
+  },
+  { timeout: 15000, maxWait: 5000 }
+);
 }
 
 /**
