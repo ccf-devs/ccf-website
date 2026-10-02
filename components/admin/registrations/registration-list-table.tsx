@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import {
   Search,
+  ChevronDown,
   Trash2,
   AlertCircle,
   Loader2,
@@ -60,7 +61,27 @@ export function RegistrationListTable({
   const [selectedFormat, setSelectedFormat] = useState<string>("ALL");
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string>("ALL");
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsExportDropdownOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsExportDropdownOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
   const [selectedRosterRegistration, setSelectedRosterRegistration] =
     useState<AdminRegistrationItem | null>(null);
   const [selectedPaymentRegistration, setSelectedPaymentRegistration] =
@@ -129,7 +150,8 @@ export function RegistrationListTable({
       return;
     }
 
-    setIsExporting(true);
+    setIsExportDropdownOpen(false);
+    setIsExportingCsv(true);
     setFeedback(null);
 
     try {
@@ -182,7 +204,47 @@ export function RegistrationListTable({
             : "A network error occurred while exporting registrations.",
       });
     } finally {
-      setIsExporting(false);
+      setIsExportingCsv(false);
+    }
+  };
+
+  
+  const handleExportXlsx = async () => {
+    if (selectedEventId === "ALL") {
+      setFeedback({ type: "error", message: "Please select a specific event from the event filter to export its registrations." });
+      return;
+    }
+    setIsExportDropdownOpen(false);
+    setIsExportingXlsx(true);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/events/${selectedEventId}/registrations/export-xlsx`);
+      if (!res.ok) {
+        let errMessage = "Failed to export registrations XLSX.";
+        try { const data = await res.json(); if (data.error) errMessage = data.error; } catch {}
+        throw new Error(errMessage);
+      }
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = "registrations.xlsx";
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+      setFeedback({ type: "success", message: `Successfully exported XLSX: ${filename}` });
+    } catch (err) {
+      console.error("[Export XLSX] Error:", err);
+      setFeedback({ type: "error", message: err instanceof Error ? err.message : "A network error occurred while exporting registrations." });
+    } finally {
+      setIsExportingXlsx(false);
     }
   };
 
@@ -318,27 +380,59 @@ export function RegistrationListTable({
             <option value="FREE">Free Admission</option>
           </select>
 
-          {/* Export CSV Action */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={selectedEventId === "ALL" || isExporting}
-            className="h-9 px-3 border-border/60 bg-ccf-surface text-ccf-offwhite hover:bg-ccf-surface-elevated hover:text-ccf-gold text-xs transition-colors"
-            title={
-              selectedEventId === "ALL"
-                ? "Select a specific event to export registrations"
-                : "Export registrations as CSV"
-            }
-          >
-            {isExporting ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin text-ccf-gold" />
-            ) : (
-              <Download className="h-3.5 w-3.5 mr-1.5 text-ccf-gold" />
+          
+          {/* Export Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+              disabled={selectedEventId === "ALL" || isExportingCsv || isExportingXlsx}
+              aria-haspopup="menu"
+              aria-expanded={isExportDropdownOpen}
+              className="h-9 px-3 border-border/60 bg-ccf-surface text-ccf-offwhite hover:bg-ccf-surface-elevated hover:text-ccf-gold text-xs transition-colors"
+              title={
+                selectedEventId === "ALL"
+                  ? "Select a specific event to export registrations"
+                  : "Export registrations"
+              }
+            >
+              {isExportingCsv || isExportingXlsx ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin text-ccf-gold" />
+              ) : (
+                <Download className="h-3.5 w-3.5 mr-1.5 text-ccf-gold" />
+              )}
+              <span>Export</span>
+              <ChevronDown className="h-3.5 w-3.5 ml-1.5 text-ccf-muted" />
+            </Button>
+            
+            {isExportDropdownOpen && (
+              <div
+                className="absolute right-0 mt-2 w-40 origin-top-right rounded-md bg-ccf-surface-elevated border border-border/60 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+                role="menu"
+                aria-orientation="vertical"
+              >
+                <div className="py-1" role="none">
+                  <button
+                    onClick={handleExportCsv}
+                    className="block w-full text-left px-4 py-2 text-xs text-ccf-offwhite hover:bg-border/40 hover:text-ccf-gold transition-colors"
+                    role="menuitem"
+                  >
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={handleExportXlsx}
+                    className="block w-full text-left px-4 py-2 text-xs text-ccf-offwhite hover:bg-border/40 hover:text-ccf-gold transition-colors"
+                    role="menuitem"
+                  >
+                    Export XLSX
+                  </button>
+                </div>
+              </div>
             )}
-            <span>Export CSV</span>
-          </Button>
+          </div>
+
         </div>
       </div>
 

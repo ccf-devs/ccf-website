@@ -114,7 +114,8 @@ function formatDateDisplay(val: Date | string | null | undefined): string {
 
 export function EventDetailView({ event, media = [] }: EventDetailViewProps) {
   const [copied, setCopied] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
   const [exportFeedback, setExportFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -251,7 +252,7 @@ export function EventDetailView({ event, media = [] }: EventDetailViewProps) {
   };
 
   const handleExportCsv = async () => {
-    setIsExporting(true);
+    setIsExportingCsv(true);
     setExportFeedback(null);
 
     try {
@@ -303,7 +304,64 @@ export function EventDetailView({ event, media = [] }: EventDetailViewProps) {
             : "A network error occurred while exporting registrations.",
       });
     } finally {
-      setIsExporting(false);
+      setIsExportingCsv(false);
+    }
+  };
+
+  const handleExportXlsx = async () => {
+    setIsExportingXlsx(true);
+    setExportFeedback(null);
+
+    try {
+      const res = await fetch(
+        `/api/admin/events/${event.id}/registrations/export-xlsx`
+      );
+
+      if (!res.ok) {
+        let errMessage = "Failed to export registrations XLSX.";
+        try {
+          const data = await res.json();
+          if (data.error) errMessage = data.error;
+        } catch {
+          // ignore json parse error
+        }
+        throw new Error(errMessage);
+      }
+
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = `CCF_${event.slug}_Registrations.xlsx`;
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setExportFeedback({
+        type: "success",
+        message: `Successfully exported XLSX: ${filename}`,
+      });
+    } catch (err) {
+      console.error("[EventDetailView Export] Error:", err);
+      setExportFeedback({
+        type: "error",
+        message:
+          err instanceof Error
+            ? err.message
+            : "A network error occurred while exporting registrations.",
+      });
+    } finally {
+      setIsExportingXlsx(false);
     }
   };
 
@@ -353,17 +411,33 @@ export function EventDetailView({ event, media = [] }: EventDetailViewProps) {
                 type="button"
                 variant="outline"
                 onClick={handleExportCsv}
-                disabled={isExporting}
+                disabled={isExportingCsv}
                 className="border-border text-ccf-muted hover:text-ccf-offwhite"
                 title="Export event registrations as CSV"
               >
-                {isExporting ? (
+                {isExportingCsv ? (
                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin text-ccf-gold" />
                 ) : (
                   <Download className="h-4 w-4 mr-1.5 text-ccf-gold" aria-hidden="true" />
                 )}
                 <span>Export CSV</span>
-              </Button>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleExportXlsx}
+                  disabled={isExportingXlsx}
+                  className="border-border text-ccf-muted hover:text-ccf-offwhite"
+                  title="Export event registrations as XLSX"
+                >
+                  {isExportingXlsx ? (
+                    <Loader2 className="h-4 w-4 mr-1.5 animate-spin text-ccf-gold" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-1.5 text-ccf-gold" aria-hidden="true" />
+                  )}
+                  <span>Export XLSX</span>
+                </Button>
 
               <Button
                 asChild
