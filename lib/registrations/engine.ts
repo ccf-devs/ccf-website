@@ -643,7 +643,7 @@ export async function executeRegistration(
       payment: paymentConfirmation,
     };
   },
-  { timeout: 15000, maxWait: 5000 }
+  { timeout: 15000, maxWait: 15000 }
 );
 }
 
