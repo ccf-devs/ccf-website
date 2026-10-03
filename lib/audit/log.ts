@@ -65,6 +65,7 @@ export const RECRUITMENT_AUDIT_ACTIONS = {
   SETTINGS_UPDATED: "RECRUITMENT_SETTINGS_UPDATED",
   STATUS_CHANGED: "RECRUITMENT_STATUS_CHANGED",
   APPLICATION_DELETED: "RECRUITMENT_APPLICATION_DELETED",
+  EXPORTED: "RECRUITMENT_EXPORTED",
 } as const;
 
 export type RecruitmentAuditAction =
@@ -79,6 +80,8 @@ export interface RecruitmentAuditMetadata {
   toStatus?: string;
   isOpen?: boolean;
   notes?: string | null;
+  count?: number;
+  format?: string;
 }
 
 export function buildRecruitmentAuditMetadata(params: {
@@ -89,6 +92,8 @@ export function buildRecruitmentAuditMetadata(params: {
   toStatus?: string;
   isOpen?: boolean;
   notes?: string | null;
+  count?: number;
+  format?: string;
 }): RecruitmentAuditMetadata {
   return {
     applicationId: params.applicationId,
@@ -98,6 +103,8 @@ export function buildRecruitmentAuditMetadata(params: {
     toStatus: params.toStatus,
     isOpen: params.isOpen,
     notes: params.notes ? params.notes.trim() : null,
+    count: params.count,
+    format: params.format,
   };
 }
 

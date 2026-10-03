@@ -16,6 +16,8 @@ import {
   X,
   AlertTriangle,
   Link as LinkIcon,
+  Download,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -187,6 +189,105 @@ export function RecruitmentManager({
       setActionError(err.message || "Failed to update application status.");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
+  const [isExportingXlsx, setIsExportingXlsx] = useState(false);
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
+  const exportDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target as Node)) {
+        setIsExportDropdownOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setIsExportDropdownOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const buildExportUrl = (basePath: string) => {
+    const url = new URL(basePath, window.location.origin);
+    if (selectedDepartment !== "ALL") url.searchParams.append("departmentId", selectedDepartment);
+    if (selectedStatus !== "ALL") url.searchParams.append("status", selectedStatus);
+    if (searchQuery.trim()) url.searchParams.append("search", searchQuery.trim());
+    return url.toString();
+  };
+
+  const handleExportCsv = async () => {
+    setIsExportDropdownOpen(false);
+    setIsExportingCsv(true);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const res = await fetch(buildExportUrl("/api/admin/recruitment/applications/export"));
+      if (!res.ok) {
+        let errMessage = "Failed to export CSV.";
+        try { const data = await res.json(); if (data.error) errMessage = data.error; } catch {}
+        throw new Error(errMessage);
+      }
+
+      const blob = await res.blob();
+      const filename = res.headers.get("content-disposition")?.split("filename=")[1]?.replace(/"/g, "") || "export.csv";
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setActionSuccess(`Successfully exported CSV: ${filename}`);
+    } catch (err) {
+      console.error("[Export CSV] Error:", err);
+      setActionError(err instanceof Error ? err.message : "A network error occurred while exporting.");
+    } finally {
+      setIsExportingCsv(false);
+    }
+  };
+
+  const handleExportXlsx = async () => {
+    setIsExportDropdownOpen(false);
+    setIsExportingXlsx(true);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const res = await fetch(buildExportUrl("/api/admin/recruitment/applications/export-xlsx"));
+      if (!res.ok) {
+        let errMessage = "Failed to export XLSX.";
+        try { const data = await res.json(); if (data.error) errMessage = data.error; } catch {}
+        throw new Error(errMessage);
+      }
+
+      const blob = await res.blob();
+      const filename = res.headers.get("content-disposition")?.split("filename=")[1]?.replace(/"/g, "") || "export.xlsx";
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setActionSuccess(`Successfully exported XLSX: ${filename}`);
+    } catch (err) {
+      console.error("[Export XLSX] Error:", err);
+      setActionError(err instanceof Error ? err.message : "A network error occurred while exporting.");
+    } finally {
+      setIsExportingXlsx(false);
     }
   };
 
@@ -446,18 +547,18 @@ export function RecruitmentManager({
       <Card className="p-4 bg-ccf-surface border-border/60">
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
           {/* Search */}
-          <div className="sm:col-span-5 relative">
+          <div className="sm:col-span-4 relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-ccf-muted" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, RRN, major..."
+              placeholder="Search applicants..."
               className="pl-9 bg-ccf-navy/40 text-sm"
             />
           </div>
 
           {/* Department Filter */}
-          <div className="sm:col-span-4">
+            <div className="sm:col-span-3">
             <select
               value={selectedDepartment}
               onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -485,9 +586,57 @@ export function RecruitmentManager({
               <option value={RecruitmentStatus.REJECTED}>REJECTED</option>
               <option value={RecruitmentStatus.WITHDRAWN}>WITHDRAWN</option>
             </select>
+            </div>
+
+            {/* Export Dropdown */}
+            <div className="sm:col-span-2 relative" ref={exportDropdownRef}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExportDropdownOpen(!isExportDropdownOpen)}
+                disabled={isExportingCsv || isExportingXlsx}
+                aria-haspopup="menu"
+                aria-expanded={isExportDropdownOpen}
+                className="w-full h-10 px-3 border-border/60 bg-ccf-surface text-ccf-offwhite hover:bg-ccf-surface-elevated hover:text-ccf-gold text-xs transition-colors justify-between"
+              >
+                <div className="flex items-center">
+                  {isExportingCsv || isExportingXlsx ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin text-ccf-gold" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 mr-1.5 text-ccf-gold" />
+                  )}
+                  <span>Export</span>
+                </div>
+                <ChevronDown className="h-3.5 w-3.5 text-ccf-muted" />
+              </Button>
+
+              {isExportDropdownOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-full origin-top-right rounded-md bg-ccf-surface-elevated border border-border/60 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+                  role="menu"
+                >
+                  <div className="py-1" role="none">
+                    <button
+                      onClick={handleExportCsv}
+                      className="block w-full text-left px-4 py-2 text-xs text-ccf-offwhite hover:bg-border/40 hover:text-ccf-gold transition-colors"
+                      role="menuitem"
+                    >
+                      Export CSV
+                    </button>
+                    <button
+                      onClick={handleExportXlsx}
+                      className="block w-full text-left px-4 py-2 text-xs text-ccf-offwhite hover:bg-border/40 hover:text-ccf-gold transition-colors"
+                      role="menuitem"
+                    >
+                      Export XLSX
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
 
       {/* 5. Applications Table */}
       <Card className="overflow-hidden bg-ccf-surface border-border/60">
