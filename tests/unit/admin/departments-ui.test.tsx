@@ -143,6 +143,7 @@ describe("Admin Departments UI Unit Tests", () => {
       expect(html).toContain("IT &amp; Media");
       expect(html).toContain("it-media");
       expect(html).toContain("Active");
+      expect(html).toContain("Delete");
     });
 
     it("renders empty state with canonical initialize CTA when 0 departments exist", () => {

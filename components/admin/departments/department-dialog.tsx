@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { X, Loader2, AlertTriangle, Layers } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export interface DepartmentItem {
   id: string;
@@ -31,11 +32,11 @@ export function DepartmentDialog({
   onClose,
   onSaved,
 }: DepartmentDialogProps) {
-  if (!isOpen || !department) return null;
+  if (!isOpen) return null;
 
   return (
     <DepartmentDialogInner
-      key={department.id}
+      key={department ? department.id : "new-dept"}
       department={department}
       onClose={onClose}
       onSaved={onSaved}
@@ -48,12 +49,15 @@ function DepartmentDialogInner({
   onClose,
   onSaved,
 }: {
-  department: DepartmentItem;
+  department: DepartmentItem | null;
   onClose: () => void;
   onSaved: (updated: DepartmentItem) => void;
 }) {
-  const [description, setDescription] = useState(department.description || "");
-  const [active, setActive] = useState(department.active);
+  const isEditing = !!department;
+  const [name, setName] = useState(department?.name || "");
+  const [slug, setSlug] = useState(department?.slug || "");
+  const [description, setDescription] = useState(department?.description || "");
+  const [active, setActive] = useState(department?.active ?? true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,13 +67,23 @@ function DepartmentDialogInner({
     setError(null);
 
     try {
-      const res = await fetch(`/api/admin/departments/${department.id}`, {
-        method: "PATCH",
+      const method = isEditing ? "PATCH" : "POST";
+      const url = isEditing ? `/api/admin/departments/${department.id}` : "/api/admin/departments";
+
+      const payload = isEditing ? {
+        description: description.trim() || null,
+        active
+      } : {
+        name: name.trim(),
+        slug: slug.trim(),
+        description: description.trim() || null,
+        active
+      };
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: description.trim() || null,
-          active,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -102,9 +116,9 @@ function DepartmentDialogInner({
             </div>
             <div>
               <h3 id="dept-dialog-title" className="text-base font-semibold text-ccf-offwhite">
-                Edit Department
+                {isEditing ? "Edit Department" : "Add Department"}
               </h3>
-              <p className="text-xs text-ccf-muted">{department.name}</p>
+              {isEditing && <p className="text-xs text-ccf-muted">{department.name}</p>}
             </div>
           </div>
           <button
@@ -124,17 +138,29 @@ function DepartmentDialogInner({
             </div>
           )}
 
-          {/* Immutable Identity Fields */}
-          <div className="grid grid-cols-2 gap-3 bg-ccf-surface-sunken p-3.5 rounded-lg border border-border/40">
-            <div>
-              <span className="text-[10px] text-ccf-muted uppercase font-semibold block">Department Name</span>
-              <span className="text-xs font-bold text-ccf-offwhite">{department.name}</span>
+          {isEditing ? (
+            <div className="grid grid-cols-2 gap-3 bg-ccf-surface-sunken p-3.5 rounded-lg border border-border/40">
+              <div>
+                <span className="text-[10px] text-ccf-muted uppercase font-semibold block">Department Name</span>
+                <span className="text-xs font-bold text-ccf-offwhite">{department.name}</span>
+              </div>
+              <div>
+                <span className="text-[10px] text-ccf-muted uppercase font-semibold block">Canonical Slug</span>
+                <span className="font-mono text-xs text-ccf-gold">{department.slug}</span>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] text-ccf-muted uppercase font-semibold block">Canonical Slug</span>
-              <span className="font-mono text-xs text-ccf-gold">{department.slug}</span>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="dept-name" className="text-xs font-semibold text-ccf-offwhite">Department Name</Label>
+                <Input id="dept-name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Media" className="bg-ccf-surface-sunken border-border/60 text-xs" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="dept-slug" className="text-xs font-semibold text-ccf-offwhite">Slug</Label>
+                <Input id="dept-slug" required value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="e.g. media" className="bg-ccf-surface-sunken border-border/60 text-xs font-mono" />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Description */}
           <div className="space-y-1.5">

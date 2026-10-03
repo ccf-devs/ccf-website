@@ -5,7 +5,7 @@ import {
   Layers,
   Users,
   UserPlus,
-  Edit2,
+  Edit2, Trash2,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -27,8 +27,11 @@ export function DepartmentListTable({
 }: DepartmentListTableProps) {
   const [departments, setDepartments] = useState<DepartmentItem[]>(initialDepartments);
   const [editingDepartment, setEditingDepartment] = useState<DepartmentItem | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [initializing, setInitializing] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [departmentToDelete, setDepartmentToDelete] = useState<DepartmentItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: "success" | "error";
     message: string;
@@ -67,6 +70,29 @@ export function DepartmentListTable({
     }
   };
 
+
+  const confirmDelete = async () => {
+    if (!departmentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/departments/${departmentToDelete.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete department.");
+      }
+      setDepartments((prev) => prev.filter((d) => d.id !== departmentToDelete.id));
+      setFeedback({ type: "success", message: `Department "${departmentToDelete.name}" deleted successfully.` });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete department.";
+      setFeedback({ type: "error", message });
+    } finally {
+      setIsDeleting(false);
+      setDepartmentToDelete(null);
+    }
+  };
+
   const handleToggleActive = async (dept: DepartmentItem) => {
     setTogglingId(dept.id);
     setFeedback(null);
@@ -99,19 +125,35 @@ export function DepartmentListTable({
     }
   };
 
+
   const handleDepartmentSaved = (updated: DepartmentItem) => {
-    setDepartments((prev) =>
-      prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d))
-    );
+    setDepartments((prev) => {
+      const exists = prev.find((d) => d.id === updated.id);
+      if (exists) {
+        return prev.map((d) => (d.id === updated.id ? { ...d, ...updated } : d));
+      }
+      return [...prev, updated].sort((a, b) => a.name.localeCompare(b.name));
+    });
     setFeedback({
       type: "success",
-      message: `Department "${updated.name}" updated successfully.`,
+      message: `Department "${updated.name}" saved successfully.`,
     });
   };
 
+
   return (
     <div className="space-y-6">
+
+      {/* Header Actions */}
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => { setEditingDepartment(null); setIsDialogOpen(true); }} className="bg-ccf-gold text-ccf-navy hover:bg-ccf-gold-light font-semibold text-xs px-5">
+          <Layers className="h-3.5 w-3.5 mr-1.5" />
+          <span>Add Department</span>
+        </Button>
+      </div>
+
       {/* Feedback Alert */}
+
       {feedback && (
         <div
           className={`rounded-lg border p-4 flex items-start gap-3 text-xs ${
@@ -249,13 +291,23 @@ export function DepartmentListTable({
                   </Button>
 
                   <Button
-                    onClick={() => setEditingDepartment(dept)}
+                    onClick={() => { setEditingDepartment(dept); setIsDialogOpen(true); }}
                     variant="outline"
                     size="sm"
                     className="text-xs border-border/60 text-ccf-offwhite hover:bg-ccf-surface-elevated h-8 px-3"
                   >
                     <Edit2 className="h-3.5 w-3.5 mr-1.5 text-ccf-gold" />
                     <span>Edit</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => setDepartmentToDelete(dept)}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 h-8 px-3"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    <span>Delete</span>
                   </Button>
                 </div>
               </CardContent>
@@ -265,10 +317,32 @@ export function DepartmentListTable({
       )}
 
       {/* Edit Dialog */}
+
+      {/* Delete Confirmation Dialog */}
+      {departmentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-ccf-surface border-border/60 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden p-6 space-y-4">
+            <h3 className="text-lg font-bold text-ccf-offwhite">Delete Department</h3>
+            <p className="text-sm text-ccf-muted">
+              Are you sure you want to delete <strong>{departmentToDelete.name}</strong>?
+              This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setDepartmentToDelete(null)} disabled={isDeleting}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={confirmDelete} disabled={isDeleting} className="bg-red-500 hover:bg-red-600 text-white font-semibold">
+                {isDeleting ? "Deleting..." : "Confirm Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DepartmentDialog
         department={editingDepartment}
-        isOpen={!!editingDepartment}
-        onClose={() => setEditingDepartment(null)}
+        isOpen={isDialogOpen}
+        onClose={() => { setEditingDepartment(null); setIsDialogOpen(false); }}
         onSaved={handleDepartmentSaved}
       />
     </div>

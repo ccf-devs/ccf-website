@@ -177,3 +177,78 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     );
   }
 }
+
+
+/**
+ * DELETE /api/admin/departments/[id]
+ * Deletes a department if it has no members.
+ */
+export async function DELETE(req: NextRequest, context: RouteContext) {
+  const admin = await getCurrentAdmin();
+  if (!admin) {
+    return NextResponse.json(
+      { error: "Authentication required." },
+      { status: 401 }
+    );
+  }
+
+  if (admin.role !== AdminRole.CCF_ADMIN && admin.role !== AdminRole.IT_ADMIN) {
+    return NextResponse.json(
+      { error: "Insufficient permissions." },
+      { status: 403 }
+    );
+  }
+
+  const { id } = await context.params;
+
+  try {
+    const existing = await prisma.department.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { members: true },
+        },
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Department not found." },
+        { status: 404 }
+      );
+    }
+
+    if (existing._count.members > 0) {
+      return NextResponse.json(
+        { error: `Cannot delete "${existing.name}" because it has ${existing._count.members} assigned members. Please reassign or delete them first.` },
+        { status: 400 }
+      );
+    }
+
+    await prisma.department.delete({
+      where: { id },
+    });
+
+    await createAuditLog({
+      actorId: admin.id,
+      action: "DEPARTMENT_DELETED",
+      entityType: "Department",
+      entityId: id,
+      metadata: {
+        departmentName: existing.name,
+        slug: existing.slug,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      deleted: true,
+    });
+  } catch (error) {
+    console.error(`[DELETE /api/admin/departments/${id}] Error:`, error);
+    return NextResponse.json(
+      { error: "Failed to delete department." },
+      { status: 500 }
+    );
+  }
+}
