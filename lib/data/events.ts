@@ -115,6 +115,20 @@ export function getEventBySlug(slug: string): CcfEvent | undefined {
 /**
  * Adapts a database Event (with optional EventContent) to the public CcfEvent shape.
  */
+
+function stripMarkdown(text: string): string {
+  if (!text) return "";
+  let stripped = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1");
+  stripped = stripped.replace(/\*\*([^*]+)\*\*/g, "$1");
+  stripped = stripped.replace(/\*([^*]+)\*/g, "$1");
+  stripped = stripped.replace(/_([^_]+)_/g, "$1");
+  stripped = stripped.replace(/^#{1,6}\s+(.*)$/gm, "$1");
+  stripped = stripped.replace(/^\s*[-*]\s+(.*)$/gm, "$1");
+  stripped = stripped.replace(/^\s*\d+\.\s+(.*)$/gm, "$1");
+  stripped = stripped.replace(/\n+/g, " ");
+  return stripped.trim();
+}
+
 export function toPublicEventSummary(dbEvent: {
   id: string;
   slug: string;
@@ -148,7 +162,7 @@ export function toPublicEventSummary(dbEvent: {
     });
   }
 
-  const desc = dbEvent.content?.descriptionRich || "";
+  const desc = stripMarkdown(dbEvent.content?.descriptionRich || "");
   const shortDesc = desc.length > 160 ? desc.slice(0, 157) + "..." : desc;
 
   let externalRegistrationUrl: string | null = null;

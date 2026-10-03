@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { CardReveal } from "@/components/ui/card-reveal";
 import { Badge } from "@/components/ui/badge";
 import { type CcfEvent } from "@/lib/data/events";
+import { RichTextView } from "@/components/ui/rich-text-view";
 
 interface EventCardProps {
   event: CcfEvent;
@@ -63,9 +64,9 @@ export function EventCard({ event }: EventCardProps) {
         </div>
 
         {/* Description */}
-        <CardDescription className="type-body text-ccf-muted text-sm leading-relaxed">
-          {event.description}
-        </CardDescription>
+        <div className="type-body text-ccf-muted text-sm leading-relaxed line-clamp-3 overflow-hidden">
+          <RichTextView content={event.content?.descriptionRich || event.description} />
+        </div>
       </CardContent>
 
       <CardFooter className="p-0 pt-4 border-t border-border/20 flex items-center justify-between">

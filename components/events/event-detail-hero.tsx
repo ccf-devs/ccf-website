@@ -79,7 +79,7 @@ export function EventDetailHero({ event, coverImageUrl }: EventDetailHeroProps) 
             <FadeIn delay={0.3}>
               <div className="type-body-lg text-ccf-muted leading-relaxed max-w-2xl">
                 <RichTextView
-                  content={event.description}
+                  content={event.content?.descriptionRich || event.description}
                   className="type-body-lg text-ccf-muted leading-relaxed"
                 />
               </div>

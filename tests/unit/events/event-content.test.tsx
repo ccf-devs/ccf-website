@@ -61,6 +61,42 @@ describe("Event Content Public Presentation Tests", () => {
     expect(html).not.toContain("notesRich");
   });
 
+
+  it("renders markdown syntax via RichTextView", () => {
+    const markdownEvent: CcfEvent = {
+      ...baseEvent,
+      content: {
+        descriptionRich: "**BoldText** and [Link](http://google.com)",
+        rulesRich: "### HeadingRule",
+        instructionsRich: "- Bullet1\n- Bullet2",
+        eligibilityRich: "1. Num1\n2. Num2",
+        notesRich: "*ItalicText*",
+      },
+    };
+    const html = renderToStaticMarkup(<EventContent event={markdownEvent} />);
+
+    // Bold
+    expect(html).toContain('<strong class="font-semibold text-ccf-offwhite">BoldText</strong>');
+    // Link
+    expect(html).toContain('<a href="http://google.com"');
+    // Heading 3
+    expect(html).toContain('<h3 class="text-base md:text-lg font-semibold text-ccf-offwhite mt-2 mb-1">HeadingRule</h3>');
+    // Bullet list
+    expect(html).toContain('<ul');
+    expect(html).toContain('>Bullet1</li>');
+    expect(html).toContain('>Bullet2</li>');
+    // Numbered list
+    expect(html).toContain('<ol');
+    expect(html).toContain('>Num1</li>');
+    expect(html).toContain('>Num2</li>');
+    // Italic
+    expect(html).toContain('<em class="italic">ItalicText</em>');
+
+    // Ensure raw formatting is not visible
+    expect(html).not.toContain("**BoldText**");
+    expect(html).not.toContain("### HeadingRule");
+  });
+
   it("does not render empty or null supplementary sections", () => {
     const eventWithOnlyDescription: CcfEvent = {
       ...baseEvent,
