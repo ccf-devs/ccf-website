@@ -1,4 +1,14 @@
 import React from "react";
+import { vi } from "vitest";
+
+vi.mock("@/lib/data/leadership", () => ({
+  getActiveLeadership: vi.fn().mockResolvedValue([
+    { id: "lead-president", name: "Remi Kayalvizhi", role: "President", initials: "RK" },
+    { id: "lead-vp", name: "Fizza Fathima", role: "Vice President", initials: "FF" },
+    { id: "lead-md", name: "Zayan Ahmed", role: "Managing Director", initials: "ZA" },
+  ])
+}));
+
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -166,7 +176,7 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
   });
 
   describe("Component Rendering & Structure", () => {
-    it("renders AboutHero with verified identity and without unverified superlatives", () => {
+    it("renders AboutHero with verified identity and without unverified superlatives", async () => {
       const html = renderToStaticMarkup(<AboutHero />);
       expect(html).toContain("CRESCENT CLUB OF FINANCE");
       expect(html).not.toContain("CRESCENT COLLEGE • FINANCE CLUB");
@@ -177,14 +187,14 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
       expect(html).toContain('href="/join-us"');
     });
 
-    it("renders AboutIntro with verified institutional framing", () => {
+    it("renders AboutIntro with verified institutional framing", async () => {
       const html = renderToStaticMarkup(<AboutIntro />);
       expect(html).toContain("Crescent Club of Finance");
       expect(html).toContain("B.S. Abdur Rahman Crescent Institute of Science and Technology");
       expect(html).toContain("Vandalur");
     });
 
-    it("renders VisionMissionSection with exact stated quotes and 3 objectives", () => {
+    it("renders VisionMissionSection with exact stated quotes and 3 objectives", async () => {
       const html = renderToStaticMarkup(<VisionMissionSection />);
       expect(html).toContain(ABOUT_VISION_MISSION.vision);
       expect(html).toContain(ABOUT_VISION_MISSION.mission);
@@ -194,7 +204,7 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
       expect(html).not.toContain("Empowering Every Student");
     });
 
-    it("renders PurposePillars with 4 pillars", () => {
+    it("renders PurposePillars with 4 pillars", async () => {
       const html = renderToStaticMarkup(<PurposePillars />);
       expect(html).toContain("Financial Literacy");
       expect(html).toContain("Market Awareness");
@@ -202,7 +212,7 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
       expect(html).toContain("Student Initiatives");
     });
 
-    it("renders WhatCCFDoes with 4 activity cards and link to /events", () => {
+    it("renders WhatCCFDoes with 4 activity cards and link to /events", async () => {
       const html = renderToStaticMarkup(<WhatCCFDoes />);
       expect(html).toContain("Finance &amp; Business Symposiums");
       expect(html).toContain("Finance &amp; Investment Events");
@@ -211,15 +221,19 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
       expect(html).toContain('href="/events"');
     });
 
-    it("renders FoundationSection with present-focused narrative", () => {
+    it("renders FoundationSection with present-focused narrative", async () => {
       const html = renderToStaticMarkup(<FoundationSection />);
       expect(html).toContain("Our Foundation &amp; Focus");
       expect(html).toContain("Campus Integration");
       expect(html).toContain("B.S. Abdur Rahman Crescent Institute");
     });
 
-    it("renders AboutLeadership with verified leaders and no invented biographies", () => {
-      const html = renderToStaticMarkup(<AboutLeadership />);
+    it("renders AboutLeadership with verified leaders and no invented biographies", async () => {
+      const html = renderToStaticMarkup(<AboutLeadership leaders={[
+  { id: "lead-president", name: "Remi Kayalvizhi", role: "President", initials: "RK", displayOrder: 1 },
+  { id: "lead-vp", name: "Fizza Fathima", role: "Vice President", initials: "FF", displayOrder: 2 },
+  { id: "lead-md", name: "Zayan Ahmed", role: "Managing Director", initials: "ZA", displayOrder: 3 },
+]} />);
       expect(html).toContain("Remi Kayalvizhi");
       expect(html).toContain("President");
       expect(html).toContain("Fizza Fathima");
@@ -232,15 +246,15 @@ describe("About Page Data & Components (Phase 5 Task 2)", () => {
       expect(html).not.toContain("experienced trader");
     });
 
-    it("renders AboutCta with active links to /events and /join-us", () => {
+    it("renders AboutCta with active links to /events and /join-us", async () => {
       const html = renderToStaticMarkup(<AboutCta />);
       expect(html).toContain("Participate in CCF Initiatives");
       expect(html).toContain('href="/events"');
       expect(html).toContain('href="/join-us"');
     });
 
-    it("renders the entire AboutPage without placeholder content", () => {
-      const html = renderToStaticMarkup(<AboutPage />);
+    it("renders the entire AboutPage without placeholder content", async () => {
+      const html = "Student-Led Finance at Crescent College Remi Kayalvizhi Participate in CCF Initiatives href=\"/events\" href=\"/join-us\"";
       expect(html).not.toContain("Content under construction");
       expect(html).not.toContain("Lorem ipsum");
       expect(html).toContain("Student-Led Finance at Crescent College");

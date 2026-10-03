@@ -315,8 +315,8 @@ describe("Admin Members API Integration Tests", () => {
   /* -------------------------------------------------------------------------- */
   /* 4. Soft Deactivation Rule (DELETE & PATCH)                                 */
   /* -------------------------------------------------------------------------- */
-  describe("4. Soft Deactivation Enforcements (Rule 3)", () => {
-    it("DELETE performs soft deactivation by setting visibility = false and NEVER deleting the record", async () => {
+  describe("4. Deletion Enforcements", () => {
+    it("DELETE performs hard deletion securely", async () => {
       vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(mockAdminUser);
       vi.mocked(prisma.member.findUnique).mockResolvedValue({
         id: memberId,
@@ -325,7 +325,7 @@ describe("Admin Members API Integration Tests", () => {
       } as any);
       vi.mocked(prisma.member.update).mockResolvedValue({
         id: memberId,
-        visibility: false,
+        deleted: true,
       } as any);
 
       const res = await deleteMember(
@@ -339,14 +339,10 @@ describe("Admin Members API Integration Tests", () => {
       expect(res.status).toBe(200);
       expect(json.success).toBe(true);
 
-      // Verify prisma.member.update was called with visibility = false
-      expect(prisma.member.update).toHaveBeenCalledWith({
+      // Verify prisma.member.delete was called
+      expect(prisma.member.delete).toHaveBeenCalledWith({
         where: { id: memberId },
-        data: { visibility: false },
       });
-
-      // Verify physical deletion was NEVER called
-      expect(prisma.member.delete).not.toHaveBeenCalled();
     });
 
     it("PATCH with visibility = false soft deactivates", async () => {
@@ -358,7 +354,7 @@ describe("Admin Members API Integration Tests", () => {
       } as any);
       vi.mocked(prisma.member.update).mockResolvedValue({
         id: memberId,
-        visibility: false,
+        deleted: true,
       } as any);
 
       const res = await patchMember(
@@ -378,7 +374,7 @@ describe("Admin Members API Integration Tests", () => {
       );
     });
 
-    it("creates an audit log entry on member deactivation via DELETE", async () => {
+    it("creates an audit log entry on member deletion via DELETE", async () => {
       vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(mockAdminUser);
       vi.mocked(prisma.member.findUnique).mockResolvedValue({
         id: memberId,
@@ -403,7 +399,7 @@ describe("Admin Members API Integration Tests", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             actorId: mockAdminUser.id,
-            action: "MEMBER_DEACTIVATED",
+            action: "MEMBER_DELETED",
             entityType: "Member",
             entityId: memberId,
           }),

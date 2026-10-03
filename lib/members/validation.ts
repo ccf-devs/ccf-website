@@ -18,8 +18,11 @@ export const createMemberSchema = z.object({
     .optional()
     .nullable(),
   departmentId: z
-    .string({ required_error: "Department is required." })
-    .uuid("Invalid department identifier."),
+    .string()
+    .uuid("Invalid department identifier.")
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   displayOrder: z.coerce
     .number({ invalid_type_error: "Display order must be a number." })
     .int("Display order must be an integer.")
@@ -67,7 +70,9 @@ export const updateMemberSchema = z.object({
   departmentId: z
     .string()
     .uuid("Invalid department identifier.")
-    .optional(),
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   displayOrder: z.coerce
     .number()
     .int("Display order must be an integer.")

@@ -18,7 +18,7 @@ export interface MemberItem {
   id: string;
   name: string;
   position: string | null;
-  departmentId: string;
+  departmentId: string | null;
   photoMediaId: string | null;
   bio: string | null;
   socialUrl: string | null;
@@ -26,7 +26,7 @@ export interface MemberItem {
   displayOrder: number;
   createdAt: string;
   updatedAt: string;
-  department: MemberDepartmentInfo;
+  department: MemberDepartmentInfo | null;
   photo?: {
     id: string;
     objectKey: string;
@@ -78,7 +78,7 @@ function MemberDialogInner({
   const [name, setName] = useState(member?.name || "");
   const [position, setPosition] = useState(member?.position || "");
   const [departmentId, setDepartmentId] = useState(
-    member?.departmentId || departments.find((d) => d.active)?.id || ""
+    member ? (member.departmentId || "") : (departments.find((d) => d.active)?.id || "")
   );
   const [displayOrder, setDisplayOrder] = useState(member?.displayOrder ?? 0);
   const [visibility, setVisibility] = useState(member?.visibility ?? true);
@@ -185,10 +185,7 @@ function MemberDialogInner({
       setError("Member name is required.");
       return;
     }
-    if (!departmentId) {
-      setError("Please select a department.");
-      return;
-    }
+
 
     setLoading(true);
     setError(null);
@@ -309,17 +306,16 @@ function MemberDialogInner({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="member-dept" className="text-xs font-semibold text-ccf-offwhite">
-                Department <span className="text-red-400">*</span>
+                Department
               </Label>
               <select
                 id="member-dept"
-                required
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
                 className="w-full h-9 rounded-md border border-border/60 bg-ccf-surface-sunken px-3 text-xs text-ccf-offwhite focus:border-ccf-gold focus:outline-none"
               >
-                <option value="" disabled>
-                  Select Department
+                <option value="">
+                  No Department (Leadership)
                 </option>
                 {eligibleDepartments.map((dept) => (
                   <option key={dept.id} value={dept.id}>

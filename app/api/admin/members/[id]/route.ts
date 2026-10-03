@@ -117,6 +117,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     }
 
     const validated = updateMemberSchema.parse(body);
+      if (validated.departmentId === "") {
+        validated.departmentId = null;
+      }
 
     const existing = await prisma.member.findUnique({
       where: { id },
@@ -168,7 +171,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (validated.name !== undefined) dataToUpdate.name = validated.name;
     if (validated.position !== undefined) dataToUpdate.position = validated.position;
     if (validated.departmentId !== undefined) {
-      dataToUpdate.department = { connect: { id: validated.departmentId } };
+      if (!validated.departmentId) {
+        if (existing.departmentId) {
+          dataToUpdate.department = { disconnect: true };
+        }
+      } else {
+        dataToUpdate.department = { connect: { id: validated.departmentId } };
+      }
     }
     if (validated.displayOrder !== undefined) dataToUpdate.displayOrder = validated.displayOrder;
     if (validated.visibility !== undefined) dataToUpdate.visibility = validated.visibility;
@@ -213,7 +222,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     if (isTransfer) {
       action = MEMBER_AUDIT_ACTIONS.TRANSFERRED;
     } else if (isVisibilityChange) {
-      action = validated.visibility === false ? MEMBER_AUDIT_ACTIONS.DEACTIVATED : MEMBER_AUDIT_ACTIONS.STATUS_CHANGED;
+      action = validated.visibility === false ? "MEMBER_DELETED" : MEMBER_AUDIT_ACTIONS.STATUS_CHANGED;
     }
 
     await createAuditLog({
@@ -291,32 +300,31 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       );
     }
 
-    await prisma.member.update({
+    await prisma.member.delete({
       where: { id },
-      data: { visibility: false },
     });
 
     await createAuditLog({
       actorId: admin.id,
-      action: MEMBER_AUDIT_ACTIONS.DEACTIVATED,
+      action: "MEMBER_DELETED",
       entityType: "Member",
       entityId: existing.id,
       metadata: {
         memberName: existing.name,
         position: existing.position,
         departmentId: existing.departmentId,
-        visibility: false,
+        deleted: true,
       },
     });
 
     return NextResponse.json({
       success: true,
-      message: "Member deactivated successfully.",
+      message: "Member deleted successfully.",
     });
   } catch (error) {
     console.error(`[DELETE /api/admin/members/${id}] Error:`, error);
     return NextResponse.json(
-      { error: "Failed to deactivate member." },
+      { error: "Failed to delete member." },
       { status: 500 }
     );
   }

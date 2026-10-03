@@ -5,7 +5,7 @@ import {
   Users,
   UserPlus,
   Search,
-  Edit2,
+  Edit2, Trash2,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -40,6 +40,8 @@ export function MemberListTable({
   const [selectedStatus, setSelectedStatus] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [memberToDelete, setMemberToDelete] = useState<MemberItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberItem | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
@@ -131,6 +133,33 @@ export function MemberListTable({
     });
   };
 
+
+  const handleDelete = (member: MemberItem) => {
+    setMemberToDelete(member);
+  };
+
+  const confirmDelete = async () => {
+    if (!memberToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/members/${memberToDelete.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete member.");
+      }
+      setMembers((prev) => prev.filter((m) => m.id !== memberToDelete.id));
+      setFeedback({ type: "success", message: `Member "${memberToDelete.name}" deleted successfully.` });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete member.";
+      setFeedback({ type: "error", message });
+    } finally {
+      setIsDeleting(false);
+      setMemberToDelete(null);
+    }
+  };
+
   const openAddDialog = () => {
     setEditingMember(null);
     setIsDialogOpen(true);
@@ -206,6 +235,7 @@ export function MemberListTable({
             className="h-9 rounded-md border border-border/60 bg-ccf-surface-sunken px-3 text-xs text-ccf-offwhite focus:border-ccf-gold focus:outline-none"
           >
             <option value="ALL">All Departments</option>
+              <option value="NONE">No Department (Leadership)</option>
             {departments.map((dept) => (
               <option key={dept.id} value={dept.id}>
                 {dept.name} {!dept.active ? "(Inactive)" : ""}
@@ -229,7 +259,7 @@ export function MemberListTable({
           {/* Add Member Button */}
           <Button
             onClick={openAddDialog}
-            disabled={!hasDepartments}
+
             size="sm"
             className="bg-ccf-gold text-ccf-navy hover:bg-ccf-gold-light font-semibold text-xs px-4 h-9 shrink-0"
           >
@@ -416,6 +446,16 @@ export function MemberListTable({
                           <Edit2 className="h-3.5 w-3.5 mr-1 text-ccf-gold" />
                           <span>Edit</span>
                         </Button>
+
+                        <Button
+                          onClick={() => handleDelete(m)}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 px-2.5 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 sm:mr-1" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -426,7 +466,23 @@ export function MemberListTable({
         </Card>
       )}
 
-      {/* Member Add/Edit Dialog */}
+
+      {memberToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-ccf-surface border-border/60 w-full max-w-sm rounded-xl shadow-2xl overflow-hidden p-6 space-y-4">
+            <h3 className="text-lg font-bold text-ccf-offwhite">Delete Member</h3>
+            <p className="text-sm text-ccf-muted">Are you sure you want to delete <strong>{memberToDelete.name}</strong>? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" size="sm" onClick={() => setMemberToDelete(null)} disabled={isDeleting}>Cancel</Button>
+              <Button size="sm" onClick={confirmDelete} disabled={isDeleting} className="bg-red-500 hover:bg-red-600 text-white font-semibold">
+                {isDeleting ? "Deleting..." : "Confirm Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+        {/* Member Add/Edit Dialog */}
       <MemberDialog
         member={editingMember}
         departments={departments}

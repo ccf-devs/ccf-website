@@ -127,24 +127,30 @@ export async function POST(req: NextRequest) {
     }
 
     const validated = createMemberSchema.parse(body);
-
-    // Rule 4: New members may only be assigned to active departments.
-    const department = await prisma.department.findUnique({
-      where: { id: validated.departmentId },
-    });
-
-    if (!department) {
-      return NextResponse.json(
-        { error: "The selected department does not exist." },
-        { status: 400 }
-      );
+    if (validated.departmentId === "") {
+      validated.departmentId = null;
     }
 
-    if (!department.active) {
-      return NextResponse.json(
-        { error: "New members may only be assigned to an active department." },
-        { status: 400 }
-      );
+    // Rule 4: New members may only be assigned to active departments.
+    let department = null;
+    if (validated.departmentId) {
+      department = await prisma.department.findUnique({
+        where: { id: validated.departmentId },
+      });
+
+      if (!department) {
+        return NextResponse.json(
+          { error: "The selected department does not exist." },
+          { status: 400 }
+        );
+      }
+
+      if (!department.active) {
+        return NextResponse.json(
+          { error: "New members may only be assigned to an active department." },
+          { status: 400 }
+        );
+      }
     }
 
     // Check photoMediaId if provided
@@ -164,7 +170,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: validated.name,
         position: validated.position || null,
-        departmentId: validated.departmentId,
+        departmentId: validated.departmentId || undefined,
         displayOrder: validated.displayOrder,
         visibility: validated.visibility,
         bio: validated.bio || null,
@@ -198,8 +204,8 @@ export async function POST(req: NextRequest) {
       metadata: {
         memberName: member.name,
         position: member.position,
-        departmentId: member.departmentId,
-        departmentName: department.name,
+        departmentId: member.departmentId ? member.departmentId : undefined,
+        departmentName: department?.name || undefined,
       },
     });
 

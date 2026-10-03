@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/db/client";
 import { toPublicEventSummary, type CcfEvent } from "@/lib/data/events";
 import { EventStatus } from "@prisma/client";
+import { getActiveLeadership } from "@/lib/data/leadership";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   let events: CcfEvent[] | undefined = undefined;
+  let leaders = await getActiveLeadership();
   let isError = false;
 
   if (!process.env.VITEST) {
@@ -66,7 +68,7 @@ export default async function HomePage() {
       <DepartmentsPreview />
 
       {/* 6. Executive Leadership Preview */}
-      <LeadershipPreview />
+      <LeadershipPreview leaders={leaders} />
 
       {/* 7. Recruitment / Join CCF Call-to-Action */}
       <JoinCta />

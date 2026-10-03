@@ -18,7 +18,7 @@ export interface DbMember {
   position: string | null;
   department: {
     name: string;
-  };
+  } | null;
   photoMedia?: {
     objectKey: string;
   } | null;
@@ -64,12 +64,31 @@ export function MembersDirectory({ members, isError }: MembersDirectoryProps = {
 
   if (members !== undefined) {
     const seen = new Set<string>();
+    // Pre-calculate to ensure Admin Board is first
+    const adminBoardMembers = members.filter(m => !m.department?.name);
+    if (adminBoardMembers.length > 0) {
+      seen.add("Admin Board");
+      departmentGroups.push({
+        department: "Admin Board",
+        members: adminBoardMembers.map(m => {
+          const initials = m.name.split(" ").map(n => n[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "M";
+          return {
+            id: m.id,
+            name: m.name,
+            designation: m.position || "Member",
+            department: "Admin Board",
+            initials,
+            photoObjectKey: m.photoMedia?.objectKey,
+          };
+        }),
+      });
+    }
     for (const member of members) {
-      const deptName = member.department?.name || "General";
+      const deptName = member.department?.name || "Admin Board";
       if (!seen.has(deptName)) {
         seen.add(deptName);
         const deptMembers = members.filter(
-          (m) => (m.department?.name || "General") === deptName
+          (m) => (m.department?.name || "Admin Board") === deptName
         );
         departmentGroups.push({
           department: deptName,

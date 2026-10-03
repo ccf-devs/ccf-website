@@ -6,10 +6,11 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Badge } from "@/components/ui/badge";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 import { FadeIn } from "@/components/motion/fade-in";
-import { CCF_ADMIN_BOARD_LEADERS } from "@/lib/data/members";
+import { ResolvedLeader } from "@/lib/data/leadership";
 import { MemberAvatar } from "./member-avatar";
 
-export function MembersLeadership() {
+export function MembersLeadership({ leaders }: { leaders: ResolvedLeader[] }) {
+  if (!leaders || leaders.length === 0) return null;
   return (
     <section className="py-16 md:py-24 bg-ccf-navy-secondary/30 border-b border-border/30">
       <Container className="space-y-12">
@@ -24,7 +25,7 @@ export function MembersLeadership() {
 
         {/* Leadership Grid */}
         <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-          {CCF_ADMIN_BOARD_LEADERS.map((leader) => (
+          {leaders.map((leader) => (
             <StaggerItem key={leader.id}>
               <Card
                 hoverable
@@ -45,14 +46,12 @@ export function MembersLeadership() {
                   </CardTitle>
                   <CardDescription className="type-metadata text-ccf-gold flex items-center justify-center gap-1.5 pt-1 font-medium">
                     <ShieldCheck className="h-4 w-4 text-ccf-gold shrink-0" aria-hidden="true" />
-                    <span>{leader.designation}</span>
+                    <span>{leader.role}</span>
                   </CardDescription>
                 </CardHeader>
 
                 <div className="pt-2">
-                  <Badge variant="outline" className="text-xs text-ccf-muted border-border/50">
-                    {leader.department}
-                  </Badge>
+                  <Badge variant="outline" className="text-xs text-ccf-muted border-border/50">Admin Board</Badge>
                 </div>
               </Card>
             </StaggerItem>

@@ -7,9 +7,11 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/ca
 import { Button } from "@/components/ui/button";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
 import { FadeIn } from "@/components/motion/fade-in";
-import { ABOUT_LEADERSHIP } from "@/lib/data/about";
+import { getActiveLeadership } from "@/lib/data/leadership";
+import { MemberAvatar } from "@/components/members/member-avatar";
 
-export function AboutLeadership() {
+export function AboutLeadership({ leaders }: { leaders: import("@/lib/data/leadership").ResolvedLeader[] }) {
+  if (!leaders || leaders.length === 0) return null;
   return (
     <section className="py-16 md:py-24 bg-ccf-navy-secondary/30 border-b border-border/30">
       <Container className="space-y-12">
@@ -33,16 +35,14 @@ export function AboutLeadership() {
         </div>
 
         <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {ABOUT_LEADERSHIP.map((leader) => (
+          {leaders.map((leader) => (
             <StaggerItem key={leader.id}>
               <Card
                 hoverable
                 className="h-full bg-ccf-surface border-border/60 p-8 flex flex-col items-center text-center space-y-4"
               >
                 {/* Monogram Avatar */}
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-2 border-ccf-gold/40 bg-ccf-surface-elevated text-ccf-gold font-display text-2xl font-bold tracking-wider shadow-sm">
-                  <span>{leader.initials}</span>
-                </div>
+                <MemberAvatar name={leader.name} initials={leader.initials} photoObjectKey={leader.photoObjectKey} sizeClassName="h-20 w-20" textClassName="text-2xl" />
 
                 <CardHeader className="p-0 space-y-1">
                   <CardTitle className="text-xl md:text-2xl font-semibold text-ccf-offwhite">

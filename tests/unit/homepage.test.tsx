@@ -1,4 +1,14 @@
 import React from "react";
+import { vi } from "vitest";
+
+vi.mock("@/lib/data/leadership", () => ({
+  getActiveLeadership: vi.fn().mockResolvedValue([
+    { id: "lead-president", name: "Remi Kayalvizhi", role: "President", initials: "RK" },
+    { id: "lead-vp", name: "Fizza Fathima", role: "Vice President", initials: "FF" },
+    { id: "lead-md", name: "Zayan Ahmed", role: "Managing Director", initials: "ZA" },
+  ])
+}));
+
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -122,7 +132,7 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
   });
 
   describe("Section Component Rendering & Regressions", () => {
-    it("renders Hero with verified label and without unverified Department of Student Affairs", () => {
+    it("renders Hero with verified label and without unverified Department of Student Affairs", async () => {
       const html = renderToStaticMarkup(<Hero />);
       expect(html).toContain(CCF_EYEBROW);
       expect(html).not.toContain("CRESCENT COLLEGE • FINANCE CLUB");
@@ -136,13 +146,13 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
       expect(html).toContain('href="/join-us"');
     });
 
-    it("renders ClubIntro with Crescent College affiliation", () => {
+    it("renders ClubIntro with Crescent College affiliation", async () => {
       const html = renderToStaticMarkup(<ClubIntro />);
       expect(html).toContain("Crescent Club of Finance");
       expect(html).toContain("B.S. Abdur Rahman Crescent Institute of Science and Technology");
     });
 
-    it("renders FeaturedEvents with conservative description and without stale registration claims", () => {
+    it("renders FeaturedEvents with conservative description and without stale registration claims", async () => {
       const html = renderToStaticMarkup(<FeaturedEvents />);
       expect(html).toContain("Explore finance events and activities organized by CCF.");
       expect(html).not.toContain("Flagship symposiums");
@@ -157,7 +167,7 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
       expect(html).toContain('href="/events/finvibe-fiesta-s2"');
     });
 
-    it("renders ValuePropositionSection with all 4 themes", () => {
+    it("renders ValuePropositionSection with all 4 themes", async () => {
       const html = renderToStaticMarkup(<ValuePropositionSection />);
       expect(html).toContain("Financial Literacy &amp; Learning");
       expect(html).toContain("Practical Market Exposure");
@@ -165,7 +175,7 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
       expect(html).toContain("Collaborative Finance Community");
     });
 
-    it("renders DepartmentsPreview with all 5 operational divisions", () => {
+    it("renders DepartmentsPreview with all 5 operational divisions", async () => {
       const html = renderToStaticMarkup(<DepartmentsPreview />);
       expect(html).toContain("Finance Management");
       expect(html).toContain("IT &amp; Media");
@@ -175,8 +185,12 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
       expect(html).toContain('href="/departments"');
     });
 
-    it("renders LeadershipPreview with confirmed board and neutral description", () => {
-      const html = renderToStaticMarkup(<LeadershipPreview />);
+    it("renders LeadershipPreview with confirmed board and neutral description", async () => {
+      const html = renderToStaticMarkup(<LeadershipPreview leaders={[
+  { id: "lead-president", name: "Remi Kayalvizhi", role: "President", initials: "RK", displayOrder: 1 },
+  { id: "lead-vp", name: "Fizza Fathima", role: "Vice President", initials: "FF", displayOrder: 2 },
+  { id: "lead-md", name: "Zayan Ahmed", role: "Managing Director", initials: "ZA", displayOrder: 3 },
+]} />);
       expect(html).toContain("Remi Kayalvizhi");
       expect(html).toContain("President");
       expect(html).toContain("RK");
@@ -190,7 +204,7 @@ describe("Homepage Data & Components (Phase 5 Task 1)", () => {
       expect(html).toContain('href="/members"');
     });
 
-    it("renders JoinCta with link to /join-us", () => {
+    it("renders JoinCta with link to /join-us", async () => {
       const html = renderToStaticMarkup(<JoinCta />);
       expect(html).toContain('href="/join-us"');
       expect(html).toContain("Ready to Compound Your Potential in Finance?");

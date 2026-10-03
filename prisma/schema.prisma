@@ -190,7 +190,7 @@ model Member {
   id           String   @id @default(uuid()) @db.Uuid
   name         String   @db.VarChar(150)
   position     String?  @db.VarChar(150)
-  departmentId String   @map("department_id") @db.Uuid
+  departmentId String?  @map("department_id") @db.Uuid
   photoMediaId String?  @map("photo_media_id") @db.Uuid
   bio          String?  @db.Text
   socialUrl    String?  @map("social_url") @db.Text
@@ -199,7 +199,7 @@ model Member {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  department Department @relation(fields: [departmentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   photo      Media?     @relation("MemberPhoto", fields: [photoMediaId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
   @@index([departmentId])

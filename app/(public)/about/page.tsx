@@ -9,6 +9,7 @@ import {
   AboutLeadership,
   AboutCta,
 } from "@/components/about";
+import { getActiveLeadership } from "@/lib/data/leadership";
 
 export const metadata: Metadata = {
   title: "About CCF — Crescent Club of Finance | Crescent College",
@@ -24,7 +25,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const leaders = await getActiveLeadership();
   return (
     <div className="flex flex-col">
       {/* 1. About Hero */}
@@ -46,7 +48,7 @@ export default function AboutPage() {
       <FoundationSection />
 
       {/* 7. Confirmed Executive Leadership */}
-      <AboutLeadership />
+      <AboutLeadership leaders={leaders} />
 
       {/* 8. Call to Action (Events & Join Us) */}
       <AboutCta />
