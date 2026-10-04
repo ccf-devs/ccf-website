@@ -13,7 +13,6 @@ import { toPublicEventSummary, type CcfEvent } from "@/lib/data/events";
 import { EventStatus } from "@prisma/client";
 import { getActiveLeadership } from "@/lib/data/leadership";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Crescent Club of Finance (CCF) — Crescent College, Vandalur",

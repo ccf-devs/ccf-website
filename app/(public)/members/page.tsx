@@ -9,7 +9,6 @@ import { prisma } from "@/lib/db/client";
 import { type DbMember } from "@/components/members/members-directory";
 import { getActiveLeadership, ResolvedLeader } from "@/lib/data/leadership";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Members — Crescent Club of Finance | Crescent College",

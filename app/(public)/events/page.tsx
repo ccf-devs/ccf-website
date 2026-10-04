@@ -10,7 +10,6 @@ import { prisma } from "@/lib/db/client";
 import { EventStatus } from "@prisma/client";
 import { toPublicEventSummary, type CcfEvent } from "@/lib/data/events";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Events — Crescent Club of Finance | Crescent College",

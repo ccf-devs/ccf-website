@@ -25,7 +25,6 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
@@ -38,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     });
     eventName = event?.name;
   } catch {
-    eventName = getEventBySlug(slug)?.name;
+    eventName = (await getEventBySlug(slug))?.name;
   }
 
   if (!eventName) {
@@ -81,7 +80,7 @@ export default async function EventRegistrationPage({ params }: PageProps) {
       <Container className="py-12 md:py-20">
         <RegistrationStatusNotice
           reason="UNAVAILABLE"
-          eventName={getEventBySlug(slug)?.name || "this event"}
+          eventName={(await getEventBySlug(slug))?.name || "this event"}
           eventSlug={slug}
         />
       </Container>

@@ -9,7 +9,6 @@ import {
 import { getPublicContactSettings } from "@/lib/site-settings/service";
 import { getContactChannels } from "@/lib/data/contact";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Contact — Crescent Club of Finance | Crescent College",

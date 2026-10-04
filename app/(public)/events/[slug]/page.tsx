@@ -9,7 +9,7 @@ import {
   EventRegistrationCta,
   EventDetailCta,
 } from "@/components/events";
-import { CCF_EVENTS, getEventBySlug, toPublicEventSummary, type CcfEvent } from "@/lib/data/events";
+import { CCF_EVENTS, getEventBySlug, isStaticCcfEvent, isDbEventWithContent, toPublicEventSummary, type CcfEvent } from "@/lib/data/events";
 import { getEventContentBySlug, type CcfEventMedia } from "@/lib/data/event-content";
 import { prisma } from "@/lib/db/client";
 import { EventStatus } from "@prisma/client";
@@ -20,7 +20,6 @@ interface EventDetailPageProps {
   }>;
 }
 
-export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   return CCF_EVENTS.map((event) => ({
@@ -34,7 +33,7 @@ export async function generateMetadata({
   const { slug } = await params;
 
   if (process.env.VITEST) {
-    const staticEvent = getEventBySlug(slug);
+    const staticEvent = (await getEventBySlug(slug)) as any;
     if (!staticEvent) {
       return {
         title: "Event Not Found — Crescent Club of Finance",
@@ -55,10 +54,7 @@ export async function generateMetadata({
 
   let event: CcfEvent | null = null;
   try {
-    const dbEvent = await prisma.event.findUnique({
-      where: { slug },
-      include: { content: true },
-    });
+    const dbEvent = await getEventBySlug(slug) as any;
     if (dbEvent && dbEvent.status === EventStatus.PUBLISHED) {
       event = toPublicEventSummary(dbEvent);
     }
@@ -92,7 +88,7 @@ export default async function EventDetailPage({
 
   // Unit-test-only static fallback branch
   if (process.env.VITEST) {
-    const staticEvent = getEventBySlug(slug);
+    const staticEvent = (await getEventBySlug(slug)) as any;
     if (!staticEvent) {
       notFound();
     }
@@ -119,10 +115,7 @@ export default async function EventDetailPage({
   let dbError = false;
 
   try {
-    dbEvent = await prisma.event.findUnique({
-      where: { slug },
-      include: { content: true },
-    });
+    dbEvent = await getEventBySlug(slug);
   } catch (err) {
     console.error("[EventDetailPage] DB query error:", err);
     dbError = true;

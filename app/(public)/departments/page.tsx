@@ -8,7 +8,6 @@ import {
 import { prisma } from "@/lib/db/client";
 import { type DbDepartment } from "@/components/departments/departments-grid";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Departments — Crescent Club of Finance | Crescent College",

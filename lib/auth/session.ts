@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth/config";
 import { prisma } from "@/lib/db/client";
 import { AdminRole } from "@prisma/client";
 
+import { cache } from "react";
+
 export interface AuthenticatedAdmin {
   id: string;
   email: string;
@@ -18,7 +20,7 @@ export interface AuthenticatedAdmin {
  * If an admin is deactivated in the DB, any subsequent request to protected APIs
  * or server components immediately rejects them.
  */
-export async function getCurrentAdmin(): Promise<AuthenticatedAdmin | null> {
+export const getCurrentAdmin = cache(async (): Promise<AuthenticatedAdmin | null> => {
   const session = await getServerSession(authOptions);
 
   if (!session?.user?.id || !session.user.email) {
@@ -47,7 +49,7 @@ export async function getCurrentAdmin(): Promise<AuthenticatedAdmin | null> {
     name: admin.name,
     role: admin.role,
   };
-}
+});
 
 /**
  * Requires an active authenticated administrator.

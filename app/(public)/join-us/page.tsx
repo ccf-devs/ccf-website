@@ -15,7 +15,6 @@ import { Container } from "@/components/site/container";
 import { Card } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Join Us — Crescent Club of Finance | Crescent College",
