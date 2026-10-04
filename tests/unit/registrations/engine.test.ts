@@ -217,8 +217,9 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
           create: vi.fn().mockResolvedValue({ id: "team-1" }),
         },
         teamMember: {
-          create: vi.fn().mockResolvedValue({ id: "member-1" }),
-        },
+            create: vi.fn().mockResolvedValue({ id: "member-1" }),
+            createMany: vi.fn().mockResolvedValue({ count: 1 }),
+          },
         payment: {
           create: vi.fn().mockImplementation(async ({ data }: any) => ({
             id: "pay-1",
@@ -579,6 +580,7 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
           },
           teamMember: {
             create: vi.fn().mockResolvedValue({ id: "member-1" }),
+            createMany: vi.fn().mockResolvedValue({ count: 1 }),
           },
         });
       });
@@ -722,9 +724,7 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
           team: {
             create: vi.fn().mockResolvedValue({ id: "team-1" }),
           },
-          teamMember: {
-            create: tmCreateMock,
-          },
+          teamMember: { create: tmCreateMock, createMany: tmCreateMock },
         });
       });
 
@@ -765,9 +765,10 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
       // Exactly 3 EventParticipant locks created: 1 for primary in Step H + 2 for additional members in Step I
       expect(epCreateMock).toHaveBeenCalledTimes(3);
       // Exactly 3 TeamMember records created
-      expect(tmCreateMock).toHaveBeenCalledTimes(3);
+      expect(tmCreateMock).toHaveBeenCalledTimes(1);
+        expect(tmCreateMock.mock.calls[0][0].data.length).toBe(3);
       // Ensure leader is marked as leader in team members
-      expect(tmCreateMock.mock.calls[0][0].data.isLeader).toBe(true);
+      expect(tmCreateMock.mock.calls[0][0].data[0].isLeader).toBe(true);
     });
 
     it("rejects team registration when primary participant is not included in the team members roster", async () => {
@@ -884,9 +885,7 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
           team: {
             create: vi.fn().mockResolvedValue({ id: "team-1" }),
           },
-          teamMember: {
-            create: tmCreateMock,
-          },
+          teamMember: { create: tmCreateMock, createMany: tmCreateMock },
         });
       });
 
@@ -919,9 +918,9 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
 
       expect(result).toBeDefined();
       // Primary participant is normalized to isLeader: true
-      expect(tmCreateMock.mock.calls[0][0].data.isLeader).toBe(true);
+      expect(tmCreateMock.mock.calls[0][0].data[0].isLeader).toBe(true);
       // Secondary participant remains isLeader: false
-      expect(tmCreateMock.mock.calls[1][0].data.isLeader).toBe(false);
+      expect(tmCreateMock.mock.calls[0][0].data[1].isLeader).toBe(false);
     });
 
     it("calculates participant-based capacity correctly using the full team roster", async () => {
@@ -1030,6 +1029,7 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
           },
           teamMember: {
             create: vi.fn().mockResolvedValue({ id: "member-1" }),
+            createMany: vi.fn().mockResolvedValue({ count: 1 }),
           },
         });
       });
@@ -1111,6 +1111,7 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
           },
           teamMember: {
             create: vi.fn().mockResolvedValue({ id: "member-1" }),
+            createMany: vi.fn().mockResolvedValue({ count: 1 }),
           },
         });
       });

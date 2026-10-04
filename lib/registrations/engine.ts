@@ -518,9 +518,9 @@ export async function executeRegistration(
       });
       teamRecord = team;
 
-      for (const m of normalizedTeamMembers) {
-        await tx.teamMember.create({
-          data: {
+      if (normalizedTeamMembers.length > 0) {
+        await tx.teamMember.createMany({
+          data: normalizedTeamMembers.map((m) => ({
             teamId: team.id,
             name: m.name,
             participantType: m.participantType,
@@ -531,9 +531,11 @@ export async function executeRegistration(
             year: m.year || null,
             position: m.position || null,
             isLeader: m.isLeader,
-          },
+          })),
         });
+      }
 
+      for (const m of normalizedTeamMembers) {
         const isPrimary =
           m.participantType === identity.participantType &&
           m.identifierNormalized === identity.identifierNormalized &&
