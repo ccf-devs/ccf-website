@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
+import { revalidateTag } from "next/cache";
+import { dangerouslyDeleteByTag } from "@vercel/functions";
 import { AdminRole } from "@prisma/client";
 import * as authSession from "@/lib/auth/session";
 import { prisma } from "@/lib/db/client";
@@ -14,6 +16,10 @@ import {
   DELETE as deleteMedia,
 } from "@/app/api/admin/media/[id]/route";
 
+vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
+vi.mock("@vercel/functions", () => ({
+  dangerouslyDeleteByTag: vi.fn(),
+}));
 vi.mock("@/lib/auth/session", () => ({
   getCurrentAdmin: vi.fn(),
 }));
@@ -54,6 +60,8 @@ vi.mock("@/lib/storage/b2", () => ({
 describe("Admin Media API Integration Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(revalidateTag).mockClear();
+    vi.mocked(dangerouslyDeleteByTag).mockClear();
     vi.mocked(prisma.auditLog.create).mockResolvedValue({ id: "audit-1" } as any);
     vi.mocked(prisma.media.count).mockResolvedValue(0);
   });
@@ -588,6 +596,60 @@ describe("Admin Media API Integration Tests", () => {
           }),
         })
       );
+      expect(revalidateTag).toHaveBeenCalledWith("media-gallery/test.png", { expire: 0 });
+      expect(dangerouslyDeleteByTag).toHaveBeenCalledWith("media:gallery/test.png", { revalidationDeadlineSeconds: 0 });
+    });
+
+    it("updates unrelated fields without calling revalidateTag", async () => {
+      vi.mocked(prisma.media.findUnique).mockResolvedValue({
+        id: mediaId,
+        objectKey: "gallery/test.png",
+        visibility: true,
+      } as any);
+      vi.mocked(prisma.media.update).mockResolvedValue({
+        id: mediaId,
+        objectKey: "gallery/test.png",
+        visibility: true,
+        altText: "New Alt",
+      } as any);
+      const req = new NextRequest("http://localhost/api/admin/media/" + mediaId, {
+        method: "PATCH",
+        body: JSON.stringify({ altText: "New Alt" }),
+      });
+      const res = await patchMedia(req, { params: Promise.resolve({ id: mediaId }) });
+      expect(res.status).toBe(200);
+      expect(revalidateTag).not.toHaveBeenCalled();
+      expect(dangerouslyDeleteByTag).not.toHaveBeenCalled();
+    });
+
+    it("handles CDN invalidation failure safely without rolling back DB mutation", async () => {
+      vi.mocked(dangerouslyDeleteByTag).mockRejectedValueOnce(new Error("Vercel API error"));
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+      vi.mocked(prisma.media.findUnique).mockResolvedValue({
+        id: mediaId,
+        objectKey: "events/vis/photo.png",
+        visibility: true,
+      } as any);
+      vi.mocked(prisma.media.update).mockResolvedValue({
+        id: mediaId,
+        objectKey: "events/vis/photo.png",
+        visibility: false,
+      } as any);
+
+      const req = new NextRequest("http://localhost/api/admin/media/" + mediaId, {
+        method: "PATCH",
+        body: JSON.stringify({ visibility: false }),
+      });
+      
+      const res = await patchMedia(req, { params: Promise.resolve({ id: mediaId }) });
+      expect(res.status).toBe(200); // DB mutation succeeds
+      
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Vercel CDN tag deletion failed for events/vis/photo.png:"),
+        expect.any(Error)
+      );
+      consoleErrorSpy.mockRestore();
     });
 
     it("updates metadata and logs MEDIA_UPDATED", async () => {
@@ -690,6 +752,8 @@ describe("Admin Media API Integration Tests", () => {
           }),
         })
       );
+      expect(revalidateTag).toHaveBeenCalledWith("media-events/test/uuid-abc.png", { expire: 0 });
+      expect(dangerouslyDeleteByTag).toHaveBeenCalledWith("media:events/test/uuid-abc.png", { revalidationDeadlineSeconds: 0 });
     });
 
     /* --- Case B: B2 object is already missing (idempotent condition) --- */

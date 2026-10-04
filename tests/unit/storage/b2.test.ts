@@ -8,10 +8,19 @@ import {
   deleteMediaObject,
   mediaObjectExists,
 } from "@/lib/storage/b2";
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { GET as getMediaRoute } from "@/app/api/media/[...key]/route";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db/client";
+import { unstable_cache } from "next/cache";
+
+vi.mock("next/cache", () => ({
+  unstable_cache: vi.fn((fn, keys, opts) => {
+    const wrapped = async (...args: any[]) => fn(...args);
+    wrapped.tags = opts?.tags;
+    return wrapped;
+  }),
+}));
 import { Readable } from "stream";
 
 // Mock S3Client send method
@@ -152,9 +161,9 @@ describe("Backblaze B2 Storage Integration", () => {
         Key: "members/john.jpg",
       });
       expect(result).toBeDefined();
-      expect(result?.mimeType).toBe("image/jpeg");
-      expect(result?.contentLength).toBe(9);
-      expect(result?.etag).toBe('"etag-xyz"');
+      expect((result as any)?.mimeType).toBe("image/jpeg");
+      expect((result as any)?.contentLength).toBe(9);
+      expect((result as any)?.etag).toBe('"etag-xyz"');
     });
 
     it("getMediaObject returns null when object is not found (NoSuchKey / 404)", async () => {
@@ -212,7 +221,23 @@ describe("Backblaze B2 Storage Integration", () => {
       expect(await res.text()).toBe("Invalid media key");
     });
 
-    it("returns 404 if no matching PostgreSQL Media record exists (strict DB requirement)", async () => {
+    
+      it("caches visibility lookups using unstable_cache with the exact object key tag", async () => {
+        vi.mocked(unstable_cache).mockClear();
+        vi.spyOn(prisma.media, "findFirst").mockResolvedValueOnce(null);
+
+        const req = new NextRequest("http://localhost/api/media/tag/test.jpg");
+        await getMediaRoute(req, {
+          params: Promise.resolve({ key: ["tag", "test.jpg"] }),
+        });
+
+        expect(unstable_cache).toHaveBeenCalledWith(
+          expect.any(Function),
+          ["media-lookup-tag/test.jpg"],
+          { tags: ["media-tag/test.jpg"] }
+        );
+      });
+it("returns 404 if no matching PostgreSQL Media record exists (strict DB requirement)", async () => {
       // Mock prisma.media.findFirst returning null
       vi.spyOn(prisma.media, "findFirst").mockResolvedValueOnce(null);
 
@@ -281,7 +306,8 @@ describe("Backblaze B2 Storage Integration", () => {
       );
     });
 
-    it("returns 304 Not Modified when client provides matching If-None-Match ETag", async () => {
+    it("returns 304 Not Modified when client provides matching If-None-Match ETag without downloading object body", async () => {
+      mockSend.mockClear();
       vi.spyOn(prisma.media, "findFirst").mockResolvedValueOnce({
         id: "media-uuid-2",
         objectKey: "events/cover.png",
@@ -289,13 +315,9 @@ describe("Backblaze B2 Storage Integration", () => {
         visibility: true,
       } as any);
 
-      const mockStream = Readable.from(["fake-data"]);
-      mockSend.mockResolvedValueOnce({
-        Body: mockStream,
-        ContentType: "image/png",
-        ContentLength: 9,
-        ETag: '"cached-etag-123"',
-      });
+      const notModifiedErr = new Error("Error");
+      (notModifiedErr as any).$metadata = { httpStatusCode: 304 };
+      mockSend.mockRejectedValueOnce(notModifiedErr);
 
       const req = new NextRequest("http://localhost/api/media/events/cover.png", {
         headers: {
@@ -307,6 +329,71 @@ describe("Backblaze B2 Storage Integration", () => {
       });
 
       expect(res.status).toBe(304);
+      
+      // Ensure it returned the cache headers correctly
+      expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600");
+      expect(res.headers.get("ETag")).toBe('"cached-etag-123"');
+      expect(res.headers.get("Vercel-Cache-Tag")).toBe("media:events/cover.png");
+      
+      // GetObject is only called once and throws 304
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it("fetches body via GetObject when client provides mismatched If-None-Match ETag", async () => {
+      mockSend.mockClear();
+      vi.spyOn(prisma.media, "findFirst").mockResolvedValueOnce({
+        id: "media-uuid-2",
+        objectKey: "events/cover.png",
+        mimeType: "image/png",
+        visibility: true,
+      } as any);
+
+      const mockStream = Readable.from(["new-data"]);
+      mockSend.mockResolvedValueOnce({
+        Body: mockStream,
+        ContentType: "image/png",
+        ContentLength: 9,
+        ETag: '"new-etag-999"',
+      });
+
+      const req = new NextRequest("http://localhost/api/media/events/cover.png", {
+        headers: {
+          "if-none-match": '"cached-etag-123"',
+        },
+      });
+      const res = await getMediaRoute(req, {
+        params: Promise.resolve({ key: ["events", "cover.png"] }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Vercel-Cache-Tag")).toBe("media:events/cover.png");
+      expect(mockSend).toHaveBeenCalledTimes(1);
+    });
+
+    it("returns 404 when client provides If-None-Match ETag but GetObject returns 404", async () => {
+      mockSend.mockClear();
+      vi.spyOn(prisma.media, "findFirst").mockResolvedValueOnce({
+        id: "media-uuid-3",
+        objectKey: "events/cover.png",
+        mimeType: "image/png",
+        visibility: true,
+      } as any);
+
+      const notFoundErr = new Error("NoSuchKey");
+      notFoundErr.name = "NoSuchKey";
+      mockSend.mockRejectedValueOnce(notFoundErr); // GetObject fails
+
+      const req = new NextRequest("http://localhost/api/media/events/cover.png", {
+        headers: {
+          "if-none-match": '"cached-etag-123"',
+        },
+      });
+      const res = await getMediaRoute(req, {
+        params: Promise.resolve({ key: ["events", "cover.png"] }),
+      });
+
+      expect(res.status).toBe(404);
+      expect(mockSend).toHaveBeenCalledTimes(1);
     });
 
     it("returns 404 if Media record exists in DB but B2 object is missing", async () => {
@@ -327,6 +414,27 @@ describe("Backblaze B2 Storage Integration", () => {
       });
 
       expect(res.status).toBe(404);
+    });
+
+    it("propagates non-304 B2 errors", async () => {
+      mockSend.mockClear();
+      vi.spyOn(prisma.media, "findFirst").mockResolvedValueOnce({
+        id: "media-uuid-4",
+        objectKey: "events/cover.png",
+        mimeType: "image/png",
+        visibility: true,
+      } as any);
+
+      const genericErr = new Error("Some Internal AWS Error");
+      mockSend.mockRejectedValueOnce(genericErr);
+
+      const req = new NextRequest("http://localhost/api/media/events/cover.png");
+      const res = await getMediaRoute(req, {
+        params: Promise.resolve({ key: ["events", "cover.png"] }),
+      });
+
+      expect(res.status).toBe(500);
+      expect(mockSend).toHaveBeenCalledTimes(1);
     });
   });
 });

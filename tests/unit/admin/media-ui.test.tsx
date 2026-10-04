@@ -194,7 +194,7 @@ describe("Admin Media UI Unit Tests", () => {
       expect(html).toContain("Stock Pitch 2026");
 
       // Media item 2
-      expect(html).toContain("gallery/photo2.png");
+      expect(html).toContain("media-2/preview");
       expect(html).toContain("1 member");
     });
 

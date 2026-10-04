@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
+import { dangerouslyDeleteByTag } from "@vercel/functions";
 import { getCurrentAdmin } from "@/lib/auth/session";
 import { AdminRole } from "@prisma/client";
 import { prisma } from "@/lib/db/client";
@@ -184,6 +186,15 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const isVisibilityChanging =
       validated.visibility !== undefined && validated.visibility !== existing.visibility;
 
+    if (isVisibilityChanging) {
+      revalidateTag(`media-${existing.objectKey}`, { expire: 0 });
+      try {
+        await dangerouslyDeleteByTag(`media:${existing.objectKey}`, { revalidationDeadlineSeconds: 0 });
+      } catch (err) {
+        console.error(`[PATCH /api/admin/media/${id}] Vercel CDN tag deletion failed for ${existing.objectKey}:`, err);
+      }
+    }
+
     await createAuditLog({
       actorId: admin.id,
       action: isVisibilityChanging
@@ -308,6 +319,13 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
     await prisma.media.delete({
       where: { id },
     });
+
+    revalidateTag(`media-${existing.objectKey}`, { expire: 0 });
+    try {
+      await dangerouslyDeleteByTag(`media:${existing.objectKey}`, { revalidationDeadlineSeconds: 0 });
+    } catch (err) {
+      console.error(`[DELETE /api/admin/media/${id}] Vercel CDN tag deletion failed for ${existing.objectKey}:`, err);
+    }
 
     // 3. Log audit entry
     await createAuditLog({

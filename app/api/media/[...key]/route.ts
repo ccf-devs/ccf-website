@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/client";
 import { getMediaObject } from "@/lib/storage/b2";
@@ -43,34 +44,57 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
     // 1. Mandatory verification against PostgreSQL Media record
     // Only serve objects that are explicitly tracked in the database and visible.
-    const media = await prisma.media.findFirst({
-      where: {
-        objectKey,
-        visibility: true,
+    const getCachedMedia = unstable_cache(
+      async (key: string) => {
+        return prisma.media.findFirst({
+          where: {
+            objectKey: key,
+            visibility: true,
+          },
+          select: {
+            id: true,
+            objectKey: true,
+            mimeType: true,
+            visibility: true,
+          },
+        });
       },
-      select: {
-        id: true,
-        objectKey: true,
-        mimeType: true,
-        visibility: true,
-      },
-    });
+      [`media-lookup-${objectKey}`],
+      { tags: [`media-${objectKey}`] }
+    );
+
+    const media = await getCachedMedia(objectKey);
 
     if (!media) {
       return new NextResponse("Not Found", { status: 404 });
     }
 
-    // Check client conditional request (ETag)
-    const clientEtag = req.headers.get("if-none-match");
 
-    // 2. Fetch object from Backblaze B2
-    const object = await getMediaObject(media.objectKey);
-    if (!object || !object.stream) {
+
+    // 2. Fetch object from Backblaze B2 (conditional on If-None-Match)
+    const clientEtag = req.headers.get("if-none-match") || undefined;
+    const object = await getMediaObject(media.objectKey, clientEtag);
+
+    if (!object) {
       return new NextResponse("Not Found", { status: 404 });
     }
 
-    if (clientEtag && object.etag && clientEtag === object.etag) {
-      return new NextResponse(null, { status: 304 });
+    if ('notModified' in object) {
+      const headers = new Headers();
+      headers.set("Content-Type", media.mimeType || "application/octet-stream");
+      if (clientEtag) {
+        headers.set("ETag", clientEtag);
+      }
+      headers.set(
+        "Cache-Control",
+        "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600"
+      );
+      headers.set("Vercel-Cache-Tag", `media:${media.objectKey}`);
+      return new NextResponse(null, { status: 304, headers });
+    }
+
+    if (!object.stream) {
+      return new NextResponse("Not Found", { status: 404 });
     }
 
     const headers = new Headers();
@@ -86,6 +110,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       "Cache-Control",
       "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600"
     );
+    headers.set("Vercel-Cache-Tag", `media:${media.objectKey}`);
 
     // Convert stream to Web ReadableStream for Response
     let body: BodyInit;

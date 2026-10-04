@@ -132,7 +132,7 @@ export async function uploadMediaObject({
  * Downloads or streams a media object from Backblaze B2.
  * Returns null if the object is not found.
  */
-export async function getMediaObject(key: string): Promise<GetMediaResult | null> {
+export async function getMediaObject(key: string, ifNoneMatch?: string): Promise<GetMediaResult | { notModified: true } | null> {
   const client = getB2Client();
   const { bucket } = getB2Config();
 
@@ -140,6 +140,7 @@ export async function getMediaObject(key: string): Promise<GetMediaResult | null
     const command = new GetObjectCommand({
       Bucket: bucket,
       Key: key,
+      IfNoneMatch: ifNoneMatch,
     });
 
     const response: GetObjectCommandOutput = await client.send(command);
@@ -151,6 +152,17 @@ export async function getMediaObject(key: string): Promise<GetMediaResult | null
       etag: response.ETag,
     };
   } catch (error: unknown) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "$metadata" in error &&
+      typeof (error as any).$metadata === "object" &&
+      (error as any).$metadata !== null &&
+      (error as any).$metadata.httpStatusCode === 304
+    ) {
+      return { notModified: true };
+    }
+
     if (
       typeof error === "object" &&
       error !== null &&
@@ -185,6 +197,7 @@ export async function deleteMediaObject(key: string): Promise<void> {
 /**
  * Checks whether an object exists in Backblaze B2.
  */
+
 export async function mediaObjectExists(key: string): Promise<boolean> {
   const client = getB2Client();
   const { bucket } = getB2Config();

@@ -458,7 +458,7 @@ export function MediaManagementConsole({
               <div className="relative aspect-video w-full bg-ccf-surface-sunken overflow-hidden border-b border-border/40 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={`/api/media/${item.objectKey}`}
+                  src={item.visibility ? `/api/media/${item.objectKey}` : `/api/admin/media/${item.id}/preview`}
                   alt={item.altText || "Media preview"}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
@@ -584,7 +584,7 @@ export function MediaManagementConsole({
                       <div className="w-12 h-12 rounded bg-ccf-surface-sunken overflow-hidden border border-border/60 flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={`/api/media/${item.objectKey}`}
+                          src={item.visibility ? `/api/media/${item.objectKey}` : `/api/admin/media/${item.id}/preview`}
                           alt={item.altText || "thumbnail"}
                           className="w-full h-full object-cover"
                           loading="lazy"
@@ -1068,7 +1068,7 @@ function EditDialogInner({
         <div className="relative aspect-video rounded bg-ccf-surface-sunken overflow-hidden border border-border/60">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={`/api/media/${media.objectKey}`}
+            src={media.visibility ? `/api/media/${media.objectKey}` : `/api/admin/media/${media.id}/preview`}
             alt={media.altText || "Preview"}
             className="w-full h-full object-cover"
           />
