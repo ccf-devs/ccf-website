@@ -65,22 +65,22 @@ describe("Event Detail Page & Showcase Verification (Phase 5 Task 5 Revision)", 
   ];
 
   describe("1. Slug Resolution & Static Generation", () => {
-    it("resolves all three canonical events by slug", () => {
-      const magnora = getEventBySlug("magnora-26");
+    it("resolves all three canonical events by slug", async () => {
+      const magnora = await getEventBySlug("magnora-26");
       expect(magnora).toBeDefined();
       expect(magnora?.name).toBe("Magnora’26");
 
-      const finrise = getEventBySlug("finrise-25");
+      const finrise = await getEventBySlug("finrise-25");
       expect(finrise).toBeDefined();
       expect(finrise?.name).toBe("FinRise’25");
 
-      const finvibe = getEventBySlug("finvibe-fiesta-s2");
+      const finvibe = await getEventBySlug("finvibe-fiesta-s2");
       expect(finvibe).toBeDefined();
       expect(finvibe?.name).toBe("FinVibe Fiesta Season 02");
     });
 
-    it("returns undefined for an unknown slug", () => {
-      const unknown = getEventBySlug("unknown-event-2099");
+    it("returns undefined for an unknown slug", async () => {
+      const unknown = await getEventBySlug("unknown-event-2099");
       expect(unknown).toBeUndefined();
     });
 

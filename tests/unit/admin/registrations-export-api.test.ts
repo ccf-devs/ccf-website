@@ -61,8 +61,6 @@ describe("Admin Registrations Export API Unit Tests", () => {
       participantName: "Rohith Y",
       collegeNormalized: null,
       identifierNormalized: "210011601001",
-      formVersionId: "fv-1",
-      formVersionNumber: 1,
       createdAt: "2026-09-08T10:00:00.000Z",
       updatedAt: "2026-09-08T10:00:00.000Z",
       responses: [
@@ -165,7 +163,6 @@ describe("Admin Registrations Export API Unit Tests", () => {
       vi.mocked(prisma.eventField.findMany).mockResolvedValue([
         {
           id: "field-1",
-          formVersionId: "fv-1",
           key: "department",
           label: "Academic Department",
           displayOrder: 1,
@@ -177,6 +174,7 @@ describe("Admin Registrations Export API Unit Tests", () => {
       });
 
       expect(res.status).toBe(200);
+      expect(regEngine.getEventRegistrationsForAdmin).toHaveBeenCalledWith(validEventId);
 
       // Check Content-Type
       expect(res.headers.get("Content-Type")).toBe("text/csv; charset=utf-8");

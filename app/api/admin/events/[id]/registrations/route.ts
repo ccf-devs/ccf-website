@@ -57,7 +57,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
       );
     }
 
-    const registrations = await getEventRegistrationsForAdmin(eventId);
+    const registrations = await getEventRegistrationsForAdmin(eventId, false);
 
     return NextResponse.json({
       event: {

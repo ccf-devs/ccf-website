@@ -63,8 +63,6 @@ describe("Registration CSV Transformer Unit Tests", () => {
       participantName: "Rohith Y",
       collegeNormalized: null,
       identifierNormalized: "210011601001",
-      formVersionId: "fv-1",
-      formVersionNumber: 1,
       createdAt: "2026-09-08T10:00:00.000Z",
       updatedAt: "2026-09-08T10:00:00.000Z",
       responses: [
@@ -151,8 +149,6 @@ describe("Registration CSV Transformer Unit Tests", () => {
       participantName: "Kaleem",
       collegeNormalized: null,
       identifierNormalized: "210011601002",
-      formVersionId: "fv-1",
-      formVersionNumber: 1,
       createdAt: "2026-09-08T10:00:00.000Z",
       updatedAt: "2026-09-08T10:00:00.000Z",
       responses: [
@@ -274,8 +270,6 @@ describe("Registration CSV Transformer Unit Tests", () => {
       participantName: "Old Participant",
       collegeNormalized: null,
       identifierNormalized: "210011601005",
-      formVersionId: "fv-1",
-      formVersionNumber: 1,
       createdAt: "2026-09-01T10:00:00.000Z",
       updatedAt: "2026-09-01T10:00:00.000Z",
       responses: [
@@ -301,8 +295,6 @@ describe("Registration CSV Transformer Unit Tests", () => {
       participantName: "New Participant",
       collegeNormalized: null,
       identifierNormalized: "210011601006",
-      formVersionId: "fv-2",
-      formVersionNumber: 2,
       createdAt: "2026-09-05T10:00:00.000Z",
       updatedAt: "2026-09-05T10:00:00.000Z",
       responses: [
@@ -360,8 +352,6 @@ describe("Registration CSV Transformer Unit Tests", () => {
         participantName: "Collision Test",
         collegeNormalized: null,
         identifierNormalized: "210011601007",
-        formVersionId: "fv-1",
-        formVersionNumber: 1,
         createdAt: "2026-09-01T10:00:00.000Z",
         updatedAt: "2026-09-01T10:00:00.000Z",
         responses: [
@@ -415,8 +405,6 @@ describe("Registration CSV Transformer Unit Tests", () => {
         participantName: "Early Bird",
         collegeNormalized: null,
         identifierNormalized: "210011601010",
-        formVersionId: "fv-1",
-        formVersionNumber: 1,
         createdAt: "2026-09-01T08:00:00.000Z",
         updatedAt: "2026-09-01T08:00:00.000Z",
         responses: [],
@@ -433,8 +421,6 @@ describe("Registration CSV Transformer Unit Tests", () => {
         participantName: "Late Comer",
         collegeNormalized: null,
         identifierNormalized: "210011601011",
-        formVersionId: "fv-1",
-        formVersionNumber: 1,
         createdAt: "2026-09-09T18:00:00.000Z",
         updatedAt: "2026-09-09T18:00:00.000Z",
         responses: [],

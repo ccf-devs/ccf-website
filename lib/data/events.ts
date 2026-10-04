@@ -1,4 +1,25 @@
 import { CCF_EYEBROW } from "@/components/site/navigation-data";
+import { prisma } from "@/lib/db/client";
+import { cache } from "react";
+
+import { Prisma } from "@prisma/client";
+
+export type DbEventWithContent = Prisma.EventGetPayload<{
+  include: { content: true }
+}>;
+
+export function isDbEventWithContent(
+  event: CcfEvent | DbEventWithContent | null | undefined
+): event is DbEventWithContent {
+  return !!event && "createdAt" in event;
+}
+
+export function isStaticCcfEvent(
+  event: CcfEvent | DbEventWithContent | null | undefined
+): event is CcfEvent {
+  return !!event && "statusVariant" in event;
+}
+
 
 export type EventStatus = "UPCOMING" | "PREVIOUS EVENT";
 export type EventStatusVariant = "warning" | "info";
@@ -108,9 +129,15 @@ export const CCF_PAST_EVENTS: readonly CcfEvent[] = CCF_EVENTS.filter(
  * Resolves a canonical event by its URL slug.
  * Returns undefined if no matching event is found.
  */
-export function getEventBySlug(slug: string): CcfEvent | undefined {
-  return CCF_EVENTS.find((event) => event.slug === slug);
-}
+export const getEventBySlug = cache(async (slug: string) => {
+  if (process.env.VITEST) {
+    return CCF_EVENTS.find((event) => event.slug === slug);
+  }
+  return await prisma.event.findUnique({
+    where: { slug },
+    include: { content: true },
+  });
+});
 
 /**
  * Adapts a database Event (with optional EventContent) to the public CcfEvent shape.
@@ -231,3 +258,4 @@ export const EVENTS_CTA = {
   secondaryCtaText: "Meet the Team",
   secondaryCtaHref: "/members",
 } as const;
+

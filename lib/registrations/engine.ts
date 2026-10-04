@@ -712,19 +712,14 @@ export async function deleteRegistrationByAdmin(
  * Fetches registrations for an event for admin view.
  */
 export async function getEventRegistrationsForAdmin(
-  eventId: string
+  eventId: string,
+  includeResponses: boolean = true
 ): Promise<AdminRegistrationView[]> {
   const registrations = await prisma.registration.findMany({
     where: { eventId },
     orderBy: { createdAt: "desc" },
     include: {
-      formVersion: {
-        select: {
-          id: true,
-          versionNumber: true,
-        },
-      },
-      responses: {
+      responses: includeResponses ? {
         include: {
           eventField: {
             select: {
@@ -734,7 +729,7 @@ export async function getEventRegistrationsForAdmin(
             },
           },
         },
-      },
+      } : false,
       team: {
         include: {
           members: true,
@@ -753,17 +748,15 @@ export async function getEventRegistrationsForAdmin(
     participantName: reg.participantName,
     collegeNormalized: reg.collegeNormalized,
     identifierNormalized: reg.identifierNormalized,
-    formVersionId: reg.formVersionId,
-    formVersionNumber: reg.formVersion.versionNumber,
     createdAt: reg.createdAt.toISOString(),
     updatedAt: reg.updatedAt.toISOString(),
-    responses: reg.responses.map((resp) => ({
+    responses: includeResponses && reg.responses ? reg.responses.map((resp: any) => ({
       fieldId: resp.eventFieldId,
       fieldKey: resp.eventField.key,
       fieldLabel: resp.eventField.label,
       valueText: resp.valueText,
       valueJson: resp.valueJson,
-    })),
+    })) : [],
     team: reg.team
       ? {
           id: reg.team.id,

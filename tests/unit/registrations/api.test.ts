@@ -316,6 +316,7 @@ describe("Phase 8: API Route Handlers & Security (Areas J & L)", () => {
       expect(res.status).toBe(200);
       expect(data.count).toBe(1);
       expect(data.registrations[0].participantName).toBe("Alice");
+      expect(engine.getEventRegistrationsForAdmin).toHaveBeenCalledWith("ev-1", false);
     });
   });
 

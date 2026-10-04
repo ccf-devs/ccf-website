@@ -138,8 +138,6 @@ export interface AdminRegistrationView {
   participantName: string;
   collegeNormalized: string | null;
   identifierNormalized: string | null;
-  formVersionId: string;
-  formVersionNumber: number;
   createdAt: string;
   updatedAt: string;
   responses: Array<{
