@@ -23,7 +23,6 @@ export interface RecruitmentMetrics {
   total: number;
   active: number;
   selected: number;
-  rejected: number;
 }
 
 export interface DashboardMetrics {

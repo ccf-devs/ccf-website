@@ -13,10 +13,12 @@ vi.mock("@/lib/db/client", () => ({
   prisma: {
     event: {
       count: vi.fn(),
+      groupBy: vi.fn(),
     },
     registration: {
       count: vi.fn(),
       findMany: vi.fn(),
+      groupBy: vi.fn(),
     },
     eventParticipant: {
       count: vi.fn(),
@@ -26,12 +28,14 @@ vi.mock("@/lib/db/client", () => ({
     },
     payment: {
       count: vi.fn(),
+      groupBy: vi.fn(),
     },
     siteSetting: {
       findUnique: vi.fn(),
     },
     recruitmentApplication: {
       count: vi.fn(),
+      groupBy: vi.fn(),
     },
     auditLog: {
       findMany: vi.fn(),
@@ -47,24 +51,26 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
   describe("1. Metric Aggregations & Data Assembly", () => {
     it("returns fully aggregated live metrics when database queries succeed", async () => {
       // Event counts: total=5, published=3, upcoming=2, draft=2
-      (prisma.event.count as any)
-        .mockResolvedValueOnce(5)
-        .mockResolvedValueOnce(3)
-        .mockResolvedValueOnce(2)
-        .mockResolvedValueOnce(2);
+      (prisma.event.groupBy as any).mockResolvedValueOnce([
+        { status: "PUBLISHED", _count: 3 },
+        { status: "DRAFT", _count: 2 },
+      ]);
+      (prisma.event.count as any).mockResolvedValueOnce(2);
 
       // Registration counts: total=120, active=110, participants=150, teams=25
-      (prisma.registration.count as any)
-        .mockResolvedValueOnce(120)
-        .mockResolvedValueOnce(110);
+      (prisma.registration.groupBy as any).mockResolvedValueOnce([
+        { status: "ACTIVE", _count: 110 },
+        { status: "CANCELLED", _count: 10 },
+      ]);
       (prisma.eventParticipant.count as any).mockResolvedValueOnce(150);
       (prisma.team.count as any).mockResolvedValueOnce(25);
 
       // Payment counts: pending=4, verified=90, rejected=10
-      (prisma.payment.count as any)
-        .mockResolvedValueOnce(4)
-        .mockResolvedValueOnce(90)
-        .mockResolvedValueOnce(10);
+      (prisma.payment.groupBy as any).mockResolvedValueOnce([
+        { status: "PENDING", _count: 4 },
+        { status: "VERIFIED", _count: 90 },
+        { status: "REJECTED", _count: 10 },
+      ]);
 
       // Recruitment settings & counts: open=true, total=45, active=35, selected=8, rejected=2
       (prisma.siteSetting.findUnique as any).mockResolvedValueOnce({
@@ -74,11 +80,11 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
           whatsappGroupUrl: "https://chat.whatsapp.com/test",
         },
       });
-      (prisma.recruitmentApplication.count as any)
-        .mockResolvedValueOnce(45)
-        .mockResolvedValueOnce(35)
-        .mockResolvedValueOnce(8)
-        .mockResolvedValueOnce(2);
+      (prisma.recruitmentApplication.groupBy as any).mockResolvedValueOnce([
+        { status: "ACTIVE", _count: 35 },
+        { status: "SELECTED", _count: 8 },
+        { status: "REJECTED", _count: 2 },
+      ]);
 
       // Recent audit logs
       (prisma.auditLog.findMany as any).mockResolvedValueOnce([
@@ -143,7 +149,6 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
       expect(result.metrics.recruitment.total).toBe(45);
       expect(result.metrics.recruitment.active).toBe(35);
       expect(result.metrics.recruitment.selected).toBe(8);
-      expect(result.metrics.recruitment.rejected).toBe(2);
 
       // Check alerts generated
       expect(result.alerts).toHaveLength(2);
@@ -167,13 +172,14 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
 
     it("correctly distinguishes zero records from database failure", async () => {
       // All counts return 0 (a brand new empty database)
+      (prisma.event.groupBy as any).mockResolvedValue([]);
       (prisma.event.count as any).mockResolvedValue(0);
-      (prisma.registration.count as any).mockResolvedValue(0);
+      (prisma.registration.groupBy as any).mockResolvedValue([]);
       (prisma.eventParticipant.count as any).mockResolvedValue(0);
       (prisma.team.count as any).mockResolvedValue(0);
-      (prisma.payment.count as any).mockResolvedValue(0);
+      (prisma.payment.groupBy as any).mockResolvedValue([]);
       (prisma.siteSetting.findUnique as any).mockResolvedValue(null);
-      (prisma.recruitmentApplication.count as any).mockResolvedValue(0);
+      (prisma.recruitmentApplication.groupBy as any).mockResolvedValue([]);
       (prisma.auditLog.findMany as any).mockResolvedValue([]);
       (prisma.registration.findMany as any).mockResolvedValue([]);
 
@@ -197,20 +203,18 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
 
   describe("2. Operational Alerts Rules", () => {
     it("generates warning alert when pendingPayments > 0 and suppresses when 0", async () => {
+      (prisma.event.groupBy as any).mockResolvedValue([]);
       (prisma.event.count as any).mockResolvedValue(0);
-      (prisma.registration.count as any).mockResolvedValue(0);
+      (prisma.registration.groupBy as any).mockResolvedValue([]);
       (prisma.eventParticipant.count as any).mockResolvedValue(0);
       (prisma.team.count as any).mockResolvedValue(0);
       (prisma.siteSetting.findUnique as any).mockResolvedValue(null);
-      (prisma.recruitmentApplication.count as any).mockResolvedValue(0);
+      (prisma.recruitmentApplication.groupBy as any).mockResolvedValue([]);
       (prisma.auditLog.findMany as any).mockResolvedValue([]);
       (prisma.registration.findMany as any).mockResolvedValue([]);
 
       // 1. With pendingPayments = 3
-      (prisma.payment.count as any)
-        .mockResolvedValueOnce(3)
-        .mockResolvedValueOnce(0)
-        .mockResolvedValueOnce(0);
+      (prisma.payment.groupBy as any).mockResolvedValueOnce([{ status: "PENDING", _count: 3 }]);
 
       const res1 = await getAdminDashboardData();
       expect(res1.success).toBe(true);
@@ -223,13 +227,14 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
 
       // 2. With pendingPayments = 0
       vi.clearAllMocks();
+      (prisma.event.groupBy as any).mockResolvedValue([]);
       (prisma.event.count as any).mockResolvedValue(0);
-      (prisma.registration.count as any).mockResolvedValue(0);
+      (prisma.registration.groupBy as any).mockResolvedValue([]);
       (prisma.eventParticipant.count as any).mockResolvedValue(0);
       (prisma.team.count as any).mockResolvedValue(0);
-      (prisma.payment.count as any).mockResolvedValue(0);
+      (prisma.payment.groupBy as any).mockResolvedValue([]);
       (prisma.siteSetting.findUnique as any).mockResolvedValue(null);
-      (prisma.recruitmentApplication.count as any).mockResolvedValue(0);
+      (prisma.recruitmentApplication.groupBy as any).mockResolvedValue([]);
       (prisma.auditLog.findMany as any).mockResolvedValue([]);
       (prisma.registration.findMany as any).mockResolvedValue([]);
 
@@ -243,13 +248,14 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
 
   describe("3. Bounded Queries & Privacy Verification", () => {
     it("enforces explicit bounded limits on audit logs (8) and registrations (5)", async () => {
+      (prisma.event.groupBy as any).mockResolvedValue([]);
       (prisma.event.count as any).mockResolvedValue(0);
-      (prisma.registration.count as any).mockResolvedValue(0);
+      (prisma.registration.groupBy as any).mockResolvedValue([]);
       (prisma.eventParticipant.count as any).mockResolvedValue(0);
       (prisma.team.count as any).mockResolvedValue(0);
-      (prisma.payment.count as any).mockResolvedValue(0);
+      (prisma.payment.groupBy as any).mockResolvedValue([]);
       (prisma.siteSetting.findUnique as any).mockResolvedValue(null);
-      (prisma.recruitmentApplication.count as any).mockResolvedValue(0);
+      (prisma.recruitmentApplication.groupBy as any).mockResolvedValue([]);
       (prisma.auditLog.findMany as any).mockResolvedValue([]);
       (prisma.registration.findMany as any).mockResolvedValue([]);
 
@@ -269,13 +275,14 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
     });
 
     it("ensures recent activity summaries strictly scrub sensitive data (RRN, phone, UTR, token, password, totp, recoveryCode)", async () => {
+      (prisma.event.groupBy as any).mockResolvedValue([]);
       (prisma.event.count as any).mockResolvedValue(0);
-      (prisma.registration.count as any).mockResolvedValue(0);
+      (prisma.registration.groupBy as any).mockResolvedValue([]);
       (prisma.eventParticipant.count as any).mockResolvedValue(0);
       (prisma.team.count as any).mockResolvedValue(0);
-      (prisma.payment.count as any).mockResolvedValue(0);
+      (prisma.payment.groupBy as any).mockResolvedValue([]);
       (prisma.siteSetting.findUnique as any).mockResolvedValue(null);
-      (prisma.recruitmentApplication.count as any).mockResolvedValue(0);
+      (prisma.recruitmentApplication.groupBy as any).mockResolvedValue([]);
 
       const sensitivePayload = {
         rrn: "210071601050",
@@ -346,7 +353,7 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
 
   describe("4. Fail-Closed Resilience on Database Failure", () => {
     it("returns typed failure state and does NOT throw when database connection fails", async () => {
-      (prisma.event.count as any).mockRejectedValueOnce(
+      (prisma.event.groupBy as any).mockRejectedValueOnce(
         new Error("FATAL: connection to server at 'localhost' failed")
       );
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -367,12 +374,13 @@ describe("Admin Dashboard Service Layer Unit Tests (Phase 12)", () => {
 
     it("recruitment settings retrieval failure must produce dashboard unavailable state rather than recruitment closed state", async () => {
       // All other DB queries succeed
+      (prisma.event.groupBy as any).mockResolvedValue([]);
       (prisma.event.count as any).mockResolvedValue(5);
-      (prisma.registration.count as any).mockResolvedValue(10);
+      (prisma.registration.groupBy as any).mockResolvedValue([]);
       (prisma.eventParticipant.count as any).mockResolvedValue(15);
       (prisma.team.count as any).mockResolvedValue(2);
-      (prisma.payment.count as any).mockResolvedValue(1);
-      (prisma.recruitmentApplication.count as any).mockResolvedValue(3);
+      (prisma.payment.groupBy as any).mockResolvedValue([]);
+      (prisma.recruitmentApplication.groupBy as any).mockResolvedValue([]);
       (prisma.auditLog.findMany as any).mockResolvedValue([]);
       (prisma.registration.findMany as any).mockResolvedValue([]);
 

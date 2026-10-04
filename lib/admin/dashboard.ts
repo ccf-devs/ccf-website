@@ -102,65 +102,43 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
     const now = new Date();
 
     const [
-      totalEvents,
-      publishedEvents,
+      eventGroups,
       upcomingEvents,
-      draftEvents,
-      totalRegistrations,
-      activeRegistrations,
+      registrationGroups,
       totalParticipants,
       activeTeams,
-      pendingPayments,
-      verifiedPayments,
-      rejectedPayments,
+      paymentGroups,
       recruitmentSetting,
-      totalApplications,
-      activeApplications,
-      selectedApplications,
-      rejectedApplications,
+      recruitmentGroups,
       recentAuditLogs,
       recentRegistrationsRaw,
     ] = await Promise.all([
-      // Events counts
-      prisma.event.count(),
-      prisma.event.count({ where: { status: EventStatus.PUBLISHED } }),
+      // Events grouped counts
+      prisma.event.groupBy({ by: ["status"], _count: true }),
+      // Upcoming events (depends on runtime startsAt)
       prisma.event.count({
         where: {
           status: EventStatus.PUBLISHED,
           startsAt: { gte: now },
         },
       }),
-      prisma.event.count({ where: { status: EventStatus.DRAFT } }),
 
-      // Registrations & participation counts
-      prisma.registration.count(),
-      prisma.registration.count({
-        where: { status: RegistrationStatus.ACTIVE },
-      }),
+      // Registrations grouped counts
+      prisma.registration.groupBy({ by: ["status"], _count: true }),
+      // Participant counts (independent tables)
       prisma.eventParticipant.count(),
       prisma.team.count({
         where: { registration: { status: RegistrationStatus.ACTIVE } },
       }),
 
-      // Payment operations counts
-      prisma.payment.count({ where: { status: PaymentStatus.PENDING } }),
-      prisma.payment.count({ where: { status: PaymentStatus.VERIFIED } }),
-      prisma.payment.count({ where: { status: PaymentStatus.REJECTED } }),
+      // Payments grouped counts
+      prisma.payment.groupBy({ by: ["status"], _count: true }),
 
-      // Recruitment intake settings & counts (authoritative query; throws on DB error)
+      // Recruitment intake settings & grouped counts
       prisma.siteSetting.findUnique({
         where: { key: RECRUITMENT_SETTINGS_KEY },
       }),
-      prisma.recruitmentApplication.count(),
-      prisma.recruitmentApplication.count({
-        where: { status: RecruitmentStatus.ACTIVE },
-      }),
-      prisma.recruitmentApplication.count({
-        where: { status: RecruitmentStatus.SELECTED },
-      }),
-      prisma.recruitmentApplication.count({
-        where: { status: RecruitmentStatus.REJECTED },
-      }),
+      prisma.recruitmentApplication.groupBy({ by: ["status"], _count: true }),
 
       // Bounded recent activity stream (take: 8)
       prisma.auditLog.findMany({
@@ -200,6 +178,22 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
         },
       }),
     ]);
+
+    // Parse mapped metrics safely preserving zero counts
+    const totalEvents = eventGroups.reduce((acc, g) => acc + g._count, 0);
+    const publishedEvents = eventGroups.find(g => g.status === EventStatus.PUBLISHED)?._count || 0;
+    const draftEvents = eventGroups.find(g => g.status === EventStatus.DRAFT)?._count || 0;
+
+    const totalRegistrations = registrationGroups.reduce((acc, g) => acc + g._count, 0);
+    const activeRegistrations = registrationGroups.find(g => g.status === RegistrationStatus.ACTIVE)?._count || 0;
+
+    const pendingPayments = paymentGroups.find(g => g.status === PaymentStatus.PENDING)?._count || 0;
+    const verifiedPayments = paymentGroups.find(g => g.status === PaymentStatus.VERIFIED)?._count || 0;
+    const rejectedPayments = paymentGroups.find(g => g.status === PaymentStatus.REJECTED)?._count || 0;
+
+    const totalApplications = recruitmentGroups.reduce((acc, g) => acc + g._count, 0);
+    const activeApplications = recruitmentGroups.find(g => g.status === RecruitmentStatus.ACTIVE)?._count || 0;
+    const selectedApplications = recruitmentGroups.find(g => g.status === RecruitmentStatus.SELECTED)?._count || 0;
 
     // Parse recruitment portal open status from siteSetting safely
     const recruitmentIsOpen = Boolean(
@@ -284,7 +278,6 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
           total: totalApplications,
           active: activeApplications,
           selected: selectedApplications,
-          rejected: rejectedApplications,
         },
       },
       alerts,
