@@ -481,16 +481,6 @@ export const MEMBERS_CTA = {
 } as const;
 
 /**
- * Utility helper to get clean initials for a member name.
- */
-export function getMemberInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "CC";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
-/**
  * Resolves a public URL for a member's photo when photoObjectKey is present.
  * Supports absolute URLs, root-relative paths, or object-storage-backed paths via
  * NEXT_PUBLIC_MEDIA_URL or canonical default "/api/media".
