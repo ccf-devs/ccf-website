@@ -108,6 +108,8 @@ describe("EventRegistrationCta Component Unit Tests", () => {
       expect(html).toContain('href="https://forms.google.com/event-2026"');
       expect(html).toContain('target="_blank"');
       expect(html).toContain('rel="noopener noreferrer"');
+      expect(html).toContain("w-full");
+      expect(html).toContain("sm:w-auto");
     });
 
     it("renders external 'Register Now' link for EXTERNAL + EXTERNAL_LINK", () => {
@@ -123,6 +125,8 @@ describe("EventRegistrationCta Component Unit Tests", () => {
       expect(html).toContain('href="https://external-platform.com/event-2026"');
       expect(html).toContain('target="_blank"');
       expect(html).toContain('rel="noopener noreferrer"');
+      expect(html).toContain("w-full");
+      expect(html).toContain("sm:w-auto");
     });
 
     it("regression: proves that rich-text URLs are NOT used as registration destinations", () => {

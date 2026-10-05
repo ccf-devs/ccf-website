@@ -73,7 +73,7 @@ export function EventRegistrationCta({ event }: EventRegistrationCtaProps) {
                 <Button asChild variant="gold" size="lg" className="w-full sm:w-auto font-semibold shadow-md">
                   <Link
                     href={`/events/${event.slug}/register`}
-                    className="inline-flex items-center justify-center gap-2"
+                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto"
                   >
                     <span>Register Now</span>
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -182,7 +182,7 @@ export function EventRegistrationCta({ event }: EventRegistrationCtaProps) {
                       href={externalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2"
+                      className="inline-flex items-center justify-center gap-2 w-full sm:w-auto"
                     >
                       <span>Register Now</span>
                       <ExternalLink className="h-4 w-4" aria-hidden="true" />
