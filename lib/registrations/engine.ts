@@ -577,12 +577,17 @@ export async function executeRegistration(
       const paymentMethod = event.paymentMethod || PaymentMethod.MANUAL_UPI;
       const upiId = event.upiId || null;
       const payeeName = event.payeeName || "Crescent Club of Finance";
+      const cleanEventName = (event.name || "Event").trim();
+      const paymentNote = cleanEventName.toUpperCase().startsWith("CCF")
+        ? `${cleanEventName} Event Registration`
+        : `CCF ${cleanEventName} Event Registration`;
+
       const paymentUri = upiId
         ? buildUpiUri(
             upiId,
             payeeName,
             feeAmount,
-            `Registration ${registrationCode}`
+            paymentNote
           )
         : null;
 
@@ -615,9 +620,13 @@ export async function executeRegistration(
       };
     }
 
+    // For PAID events, withhold registrationCode until user submits their 12-digit UTR
+    const isPaidEvent = event.paymentMode === PaymentMode.PAID;
+    const isCodeWithheld = isPaidEvent;
+
     return {
       id: registration.id,
-      registrationCode: registration.registrationCode,
+      registrationCode: isCodeWithheld ? null : registration.registrationCode,
       status: registration.status,
       registrationType: registration.registrationType,
       participantType: registration.participantType,

@@ -111,9 +111,13 @@ describe("UPI & QR Code Utilities (Phase 10)", () => {
       expect(ref).toBe("408112345678");
     });
 
-    it("accepts valid alphanumeric reference codes with hyphens and underscores", () => {
-      const ref = normalizeAndValidatePaymentReference("AXIS-UPI-9988776655");
-      expect(ref).toBe("AXIS-UPI-9988776655");
+    it("rejects non-numeric characters", () => {
+      expect(() => normalizeAndValidatePaymentReference("AXIS-UPI-9988")).toThrowError(
+        /must be exactly 12 numeric digits/
+      );
+      expect(() => normalizeAndValidatePaymentReference("40811234567A")).toThrowError(
+        /must be exactly 12 numeric digits/
+      );
     });
 
     it("rejects empty or whitespace-only references", () => {
@@ -125,26 +129,25 @@ describe("UPI & QR Code Utilities (Phase 10)", () => {
       );
     });
 
-    it("rejects references shorter than 6 characters", () => {
-      expect(() => normalizeAndValidatePaymentReference("12345")).toThrowError(
-        /between 6 and 50 characters/
+    it("rejects references shorter than 12 digits", () => {
+      expect(() => normalizeAndValidatePaymentReference("12345678901")).toThrowError(
+        /must be exactly 12 numeric digits/
       );
     });
 
-    it("rejects references longer than 50 characters", () => {
-      const longRef = "A".repeat(51);
-      expect(() => normalizeAndValidatePaymentReference(longRef)).toThrowError(
-        /between 6 and 50 characters/
+    it("rejects references longer than 12 digits", () => {
+      expect(() => normalizeAndValidatePaymentReference("1234567890123")).toThrowError(
+        /must be exactly 12 numeric digits/
       );
     });
 
     it("rejects dangerous or script injection characters", () => {
       expect(() =>
         normalizeAndValidatePaymentReference("<script>alert(1)</script>")
-      ).toThrowError(/contains invalid characters/);
+      ).toThrowError(/must be exactly 12 numeric digits/);
       expect(() =>
         normalizeAndValidatePaymentReference('UTR-12345"OR 1=1')
-      ).toThrowError(/contains invalid characters/);
+      ).toThrowError(/must be exactly 12 numeric digits/);
     });
   });
 });

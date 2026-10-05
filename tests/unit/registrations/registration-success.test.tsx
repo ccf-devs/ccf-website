@@ -51,4 +51,117 @@ describe("RegistrationSuccess Public UI Simplification", () => {
     expect(html).not.toContain("Crescent Student");
     expect(html).not.toContain("External Participant");
   });
+
+  it("renders PAYMENT REQUIRED and withholds registration code when UTR has not been submitted", () => {
+    const paidConfirmation: RegistrationConfirmation = {
+      ...sampleConfirmation,
+      registrationCode: null,
+      payment: {
+        status: "PENDING",
+        method: "MANUAL_UPI",
+        amount: "250",
+        currency: "INR",
+        upiId: "ccf@okaxis",
+        payeeName: "Crescent Club of Finance",
+        userReference: null,
+        paymentUri: "upi://pay?pa=ccf%40okaxis&am=250",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <RegistrationSuccess confirmation={paidConfirmation} />
+    );
+
+    expect(html).toContain("PAYMENT REQUIRED");
+    expect(html).toContain("Complete Your Payment");
+    expect(html).toContain(
+      "After completing the payment, enter your 12-digit UTR below. Your payment will be verified by the CCF team."
+    );
+    expect(html).not.toContain("Initiation is not proof of payment");
+    expect(html).not.toContain("Registration Code");
+    expect(html).not.toContain("CCF-MAG-2026-X99");
+  });
+
+  it("renders PAYMENT SUBMITTED and reveals registration code when UTR is present", () => {
+    const paidSubmittedConfirmation: RegistrationConfirmation = {
+      ...sampleConfirmation,
+      registrationCode: "CCF-MAG-2026-X99",
+      payment: {
+        status: "PENDING",
+        method: "MANUAL_UPI",
+        amount: "250",
+        currency: "INR",
+        upiId: "ccf@okaxis",
+        payeeName: "Crescent Club of Finance",
+        userReference: "408112345678",
+        paymentUri: "upi://pay?pa=ccf%40okaxis&am=250",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <RegistrationSuccess confirmation={paidSubmittedConfirmation} />
+    );
+
+    expect(html).toContain("PAYMENT SUBMITTED");
+    expect(html).toContain("Payment Submitted");
+    expect(html).toContain(
+      "Your payment details have been submitted and are awaiting verification by the CCF team."
+    );
+    expect(html).toContain("Registration Code");
+    expect(html).toContain("CCF-MAG-2026-X99");
+    expect(html).toContain("SUBMITTED");
+  });
+
+  it("renders REGISTRATION CONFIRMED when payment status is VERIFIED", () => {
+    const paidVerifiedConfirmation: RegistrationConfirmation = {
+      ...sampleConfirmation,
+      registrationCode: "CCF-MAG-2026-X99",
+      payment: {
+        status: "VERIFIED",
+        method: "MANUAL_UPI",
+        amount: "250",
+        currency: "INR",
+        upiId: "ccf@okaxis",
+        payeeName: "Crescent Club of Finance",
+        userReference: "408112345678",
+        paymentUri: "upi://pay?pa=ccf%40okaxis&am=250",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <RegistrationSuccess confirmation={paidVerifiedConfirmation} />
+    );
+
+    expect(html).toContain("REGISTRATION CONFIRMED");
+    expect(html).toContain("Registration Confirmed");
+    expect(html).toContain("Your payment has been verified and your registration");
+    expect(html).toContain("VERIFIED");
+    expect(html).toContain("CCF-MAG-2026-X99");
+  });
+
+  it("renders PAYMENT REJECTED and enables resubmission when payment status is REJECTED", () => {
+    const paidRejectedConfirmation: RegistrationConfirmation = {
+      ...sampleConfirmation,
+      registrationCode: null,
+      payment: {
+        status: "REJECTED",
+        method: "MANUAL_UPI",
+        amount: "250",
+        currency: "INR",
+        upiId: "ccf@okaxis",
+        payeeName: "Crescent Club of Finance",
+        userReference: "408112345678",
+        paymentUri: "upi://pay?pa=ccf%40okaxis&am=250",
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <RegistrationSuccess confirmation={paidRejectedConfirmation} />
+    );
+
+    expect(html).toContain("PAYMENT REJECTED");
+    expect(html).toContain("Payment Rejected");
+    expect(html).toContain("resubmit your 12-digit UTR below");
+    expect(html).toContain("REJECTED");
+  });
 });

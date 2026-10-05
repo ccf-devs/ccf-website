@@ -21,7 +21,11 @@ export const TeamMemberSchema = z.object({
   rrn: z.string().optional(),
   college: z.string().optional(),
   rollNumber: z.string().optional(),
-  phone: z.string().max(30).optional(),
+  phone: z
+    .string()
+    .regex(/^\d{10}$/, "Phone number must be exactly 10 numeric digits")
+    .optional()
+    .or(z.literal("")),
   academicDepartment: z.string().max(150).optional(),
   year: z.string().max(50).optional(),
   position: z.string().max(100).optional(),
@@ -47,7 +51,10 @@ export const RegistrationSubmissionSchema = z.object({
     .optional(),
   payment: z
     .object({
-      userReference: z.string().max(200).optional(),
+      userReference: z
+        .string()
+        .regex(/^\d{12}$/, "Payment reference must be exactly 12 numeric digits.")
+        .optional(),
     })
     .optional(),
 });

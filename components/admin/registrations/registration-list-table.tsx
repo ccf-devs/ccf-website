@@ -105,6 +105,10 @@ export function RegistrationListTable({
       if (selectedPaymentStatus !== "ALL") {
         if (selectedPaymentStatus === "FREE") {
           if (reg.paymentStatus !== null) return false;
+        } else if (selectedPaymentStatus === "SUBMITTED") {
+          if (!(reg.paymentStatus === "PENDING" && reg.payment?.userReference)) return false;
+        } else if (selectedPaymentStatus === "PENDING") {
+          if (!(reg.paymentStatus === "PENDING" && !reg.payment?.userReference)) return false;
         } else if (reg.paymentStatus !== selectedPaymentStatus) {
           return false;
         }
@@ -374,7 +378,8 @@ export function RegistrationListTable({
             className="h-9 px-3 rounded-md border border-border/60 bg-ccf-surface text-ccf-offwhite text-xs focus:outline-none focus:ring-1 focus:ring-ccf-gold"
           >
             <option value="ALL">All Payments</option>
-            <option value="PENDING">Pending Payment</option>
+            <option value="SUBMITTED">Submitted (Awaiting Review)</option>
+            <option value="PENDING">Pending (Not Submitted)</option>
             <option value="VERIFIED">Verified</option>
             <option value="REJECTED">Rejected</option>
             <option value="FREE">Free Admission</option>
@@ -525,25 +530,39 @@ export function RegistrationListTable({
                     <td className="py-3 px-4">
                       {reg.paymentStatus ? (
                         <div className="space-y-1">
-                          <Badge
-                            variant={
-                              reg.paymentStatus === "VERIFIED"
-                                ? "success"
-                                : reg.paymentStatus === "REJECTED"
-                                ? "destructive"
-                                : "warning"
-                            }
-                            className="text-[10px] font-mono"
-                          >
-                            {reg.paymentStatus}
-                            {reg.paymentAmount ? ` (₹${reg.paymentAmount})` : ""}
-                          </Badge>
-                          {reg.payment?.userReference && (
+                          {reg.paymentStatus === "PENDING" && reg.payment?.userReference ? (
+                            <Badge
+                              variant="warning"
+                              className="text-[10px] font-mono bg-amber-500/20 text-amber-300 border-amber-500/40"
+                            >
+                              SUBMITTED
+                              {reg.paymentAmount ? ` (₹${reg.paymentAmount})` : ""}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant={
+                                reg.paymentStatus === "VERIFIED"
+                                  ? "success"
+                                  : reg.paymentStatus === "REJECTED"
+                                  ? "destructive"
+                                  : "secondary"
+                              }
+                              className="text-[10px] font-mono"
+                            >
+                              {reg.paymentStatus}
+                              {reg.paymentAmount ? ` (₹${reg.paymentAmount})` : ""}
+                            </Badge>
+                          )}
+                          {reg.payment?.userReference ? (
                             <div
-                              className="text-[10px] font-mono text-ccf-muted truncate max-w-[140px]"
+                              className="text-[10px] font-mono text-ccf-gold truncate max-w-[140px] font-medium"
                               title={`UTR: ${reg.payment.userReference}`}
                             >
                               UTR: {reg.payment.userReference}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] font-mono text-ccf-muted/70 italic">
+                              Payment not submitted yet
                             </div>
                           )}
                         </div>

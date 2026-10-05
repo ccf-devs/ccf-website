@@ -58,14 +58,24 @@ describe("Phase 10: Payment UI Components & State Machine", () => {
       expect(html).toContain("crescentclub@okaxis");
       expect(html).toContain("Crescent Club of Finance");
 
-      // UPI QR and Intent Link
+      // UPI QR and Intent Link (mobile-only intent CTA with md:hidden)
       expect(html).toContain("Pay with UPI App");
       expect(html).toContain("upi://pay?");
+      expect(html).toContain("md:hidden");
 
       // UTR Reference submission input
       expect(html).toContain("Submit Payment Reference (UTR)");
       expect(html).toContain("Submit UTR");
       expect(html).toContain("placeholder=\"e.g. 408112345678 (12-digit UTR)\"");
+
+      // User-facing copy without internal administrative jargon
+      expect(html).toContain(
+        "After completing the payment, enter your 12-digit UTR below. Your payment will be verified by the CCF team."
+      );
+      expect(html).not.toContain("Initiation is not proof of payment");
+
+      // Registration code is withheld pre-UTR
+      expect(html).not.toContain("CCF-MAG-9876");
 
       // Status badge shows PENDING
       expect(html).toContain("PENDING");
@@ -249,6 +259,31 @@ describe("Phase 10: Payment UI Components & State Machine", () => {
       expect(html).toContain("408112345678");
       // Admin notes input rendered
       expect(html).toContain("admin-payment-notes");
+    });
+
+    it("PENDING state without UTR: disables Verify Payment button and shows not submitted notice", () => {
+      const html = renderToStaticMarkup(
+        <PaymentVerificationDialog
+          isOpen={true}
+          onClose={() => {}}
+          registrationId="reg-1"
+          eventId="ev-1"
+          eventName="Magnora ’26"
+          registrationCode="CCF-MAG-1234"
+          participantName="John Doe"
+          payment={{
+            ...basePayment,
+            status: PaymentStatus.PENDING,
+            userReference: null,
+          }}
+          onPaymentUpdated={() => {}}
+        />
+      );
+
+      // Verify button disabled
+      expect(html).toContain("disabled=\"\"");
+      expect(html).toContain("Payment not submitted yet");
+      expect(html).toContain("PENDING");
     });
 
     it("REJECTED state: renders Verify Payment button, but strictly HIDES Reject button", () => {

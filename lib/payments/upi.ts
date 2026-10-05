@@ -105,13 +105,14 @@ export async function generateUpiQrCodeDataUrl(paymentUri: string): Promise<stri
 /**
  * Validates and normalizes user-submitted payment reference / UTR.
  *
- * Indian banking UPI UTRs (Unified Transaction Reference) are typically
- * 12-digit numeric codes, though some netbanking or third-party apps format
- * them with letters or prefixes (e.g. UPI/408112345678).
+ * Indian banking UPI UTRs (Unified Transaction Reference) are strictly
+ * 12-digit numeric codes.
  *
  * Enforces:
- * - Trimmed length between 6 and 50 characters
- * - Alphanumeric with safe delimiters (- / _)
+ * - Exactly 12 numeric digits (/^\d{12}$/)
+ * - Rejects fewer than 12 digits
+ * - Rejects more than 12 digits
+ * - Rejects letters, symbols, or special characters
  */
 export function normalizeAndValidatePaymentReference(rawReference: string): string {
   if (typeof rawReference !== "string") {
@@ -132,18 +133,9 @@ export function normalizeAndValidatePaymentReference(rawReference: string): stri
     );
   }
 
-  if (trimmed.length < 6 || trimmed.length > 50) {
+  if (!/^\d{12}$/.test(trimmed)) {
     throw new PaymentDomainError(
-      "Payment reference / UTR must be between 6 and 50 characters.",
-      PaymentErrorCode.INVALID_REFERENCE,
-      400
-    );
-  }
-
-  // Reject obvious dangerous strings or injection attempts
-  if (/[<>{}\\\^~`"]/.test(trimmed)) {
-    throw new PaymentDomainError(
-      "Payment reference contains invalid characters.",
+      "Payment reference / UTR must be exactly 12 numeric digits.",
       PaymentErrorCode.INVALID_REFERENCE,
       400
     );

@@ -1384,7 +1384,7 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
   });
 
   describe("Payment Separation (Area K)", () => {
-    it("creates PENDING manual UPI payment for PAID event without false verification", async () => {
+    it("creates PENDING manual UPI payment for PAID event without false verification and withholds registration code", async () => {
       (prisma.event.findUnique as any).mockResolvedValue({
         ...baseEvent,
         paymentMode: PaymentMode.PAID,
@@ -1411,6 +1411,30 @@ describe("Phase 8: Registration Engine (Areas A, B, C, F, G, H, K, L)", () => {
       expect(result.payment?.amount).toBe("250");
       expect(result.payment?.upiId).toBe("ccf@okaxis");
       expect(result.payment?.paymentUri).toContain("upi://pay");
+      // Clean payment note without registration code
+      expect(result.payment?.paymentUri).not.toContain("CCF-MAGNORA");
+      expect(result.payment?.paymentUri).toContain("Event+Registration");
+      // Registration code is withheld for paid event until UTR submission
+      expect(result.registrationCode).toBeNull();
+    });
+
+    it("returns registration code immediately for FREE event", async () => {
+      (prisma.event.findUnique as any).mockResolvedValue({
+        ...baseEvent,
+        paymentMode: PaymentMode.FREE,
+      });
+
+      const result = await executeRegistration("magnora-26", {
+        participantType: ParticipantType.CRESCENT,
+        responses: {
+          participant_type: "CRESCENT",
+          participant_name: "Free Student",
+          crescent_rrn: "210071601001",
+        },
+      });
+
+      expect(result.payment).toBeNull();
+      expect(result.registrationCode).toBe("CCF-MAGNORA2-A1B2C3D4");
     });
   });
 

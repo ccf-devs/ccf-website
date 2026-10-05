@@ -92,7 +92,7 @@ export interface RegistrationSubmissionInput {
  */
 export interface RegistrationConfirmation {
   id: string;
-  registrationCode: string;
+  registrationCode: string | null;
   status: RegistrationStatus;
   registrationType: RegistrationType;
   participantType: ParticipantType;

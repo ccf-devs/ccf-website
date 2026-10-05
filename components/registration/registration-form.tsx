@@ -239,6 +239,12 @@ export function RegistrationForm({
             seenIdentities.add(key);
           }
         }
+
+        if (m.phone && m.phone.trim()) {
+          if (!/^\d{10}$/.test(m.phone.trim())) {
+            newErrors[`${memberKeyPrefix}.phone`] = "Phone number must be exactly 10 numeric digits.";
+          }
+        }
       });
     }
 

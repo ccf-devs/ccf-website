@@ -197,9 +197,14 @@ function renderFieldInput(
         <Input
           {...commonProps}
           type="tel"
+          inputMode="numeric"
+          maxLength={10}
           value={value}
           placeholder={field.config.placeholder || "10-digit mobile number"}
-          onChange={(e) => onChange(field.key, e.target.value)}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
+            onChange(field.key, digits);
+          }}
         />
       );
 

@@ -181,18 +181,27 @@ export function PaymentVerificationDialog({
             </div>
             <div>
               <span className="text-ccf-muted block mb-0.5">Payment Status</span>
-              <Badge
-                variant={
-                  payment.status === "VERIFIED"
-                    ? "success"
-                    : payment.status === "REJECTED"
-                    ? "destructive"
-                    : "warning"
-                }
-                className="text-xs font-mono"
-              >
-                {payment.status}
-              </Badge>
+              {payment.status === "PENDING" && payment.userReference ? (
+                <Badge
+                  variant="warning"
+                  className="text-xs font-mono bg-amber-500/20 text-amber-300 border-amber-500/40"
+                >
+                  SUBMITTED
+                </Badge>
+              ) : (
+                <Badge
+                  variant={
+                    payment.status === "VERIFIED"
+                      ? "success"
+                      : payment.status === "REJECTED"
+                      ? "destructive"
+                      : "secondary"
+                  }
+                  className="text-xs font-mono"
+                >
+                  {payment.status}
+                </Badge>
+              )}
             </div>
             {payment.upiId && (
               <div>
@@ -238,8 +247,8 @@ export function PaymentVerificationDialog({
                 </Button>
               </div>
             ) : (
-              <div className="p-2.5 rounded-lg bg-ccf-surface text-ccf-muted text-xs italic">
-                No UTR reference submitted by the registrant yet.
+              <div className="p-2.5 rounded-lg bg-ccf-surface text-amber-400/90 text-xs italic border border-amber-500/20">
+                Payment not submitted yet. The registrant has not submitted a 12-digit UTR reference.
               </div>
             )}
           </div>
@@ -332,9 +341,14 @@ export function PaymentVerificationDialog({
                 type="button"
                 variant="gold"
                 size="sm"
-                disabled={Boolean(actionLoading)}
+                disabled={Boolean(actionLoading) || !payment.userReference}
                 onClick={() => handleAction("VERIFY")}
-                className="text-xs"
+                className="text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                title={
+                  !payment.userReference
+                    ? "Cannot verify payment before registrant submits UTR reference"
+                    : "Verify payment"
+                }
               >
                 {actionLoading === "VERIFY" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />

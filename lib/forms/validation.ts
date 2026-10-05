@@ -292,11 +292,11 @@ export function validateFormSubmission(
       }
 
       case FieldType.PHONE: {
-        const phoneDigits = String(value).replace(/\D/g, "");
-        if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+        const strVal = String(value ?? "").trim();
+        if (!/^\d{10}$/.test(strVal)) {
           errors[field.key] =
             field.validation?.customErrorMessage ||
-            "Please enter a valid 10-digit phone number";
+            "Please enter a valid 10-digit mobile number";
         }
         break;
       }

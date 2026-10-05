@@ -12,10 +12,12 @@ interface RouteContext {
 }
 
 const PaymentReferenceSchema = z.object({
-  userReference: z.string({
-    required_error: "Payment reference / UTR is required.",
-    invalid_type_error: "Payment reference must be a string.",
-  }),
+  userReference: z
+    .string({
+      required_error: "Payment reference / UTR is required.",
+      invalid_type_error: "Payment reference must be a string.",
+    })
+    .regex(/^\d{12}$/, "Payment reference / UTR must be exactly 12 numeric digits."),
 });
 
 /**
@@ -23,12 +25,13 @@ const PaymentReferenceSchema = z.object({
  * Public endpoint for registrants to submit or update their UPI UTR / reference number.
  *
  * Rules:
- * - Event and Registration must match the URL path.
+ * - Event and Registration must match the URL path (accepts registration code or UUID).
  * - Event must be PAID and INTERNAL.
- * - Reference must be valid (6-50 characters).
- * - Payment status strictly remains PENDING.
+ * - Reference must be valid (exactly 12 numeric digits).
+ * - Payment status strictly remains PENDING (or resets to PENDING if REJECTED).
  * - Rejects free or external events.
  * - Prevents overwriting already verified payments.
+ * - Returns revealed registrationCode upon successful UTR submission.
  */
 export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
@@ -61,11 +64,17 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       );
     }
 
-    // Verify registration matches slug
+    // Verify registration matches slug (supports registration code or registration UUID)
+    const cleanCode = (code || "").trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanCode);
+
     const registration = await prisma.registration.findUnique({
-      where: { registrationCode: code.trim().toUpperCase() },
+      where: isUuid
+        ? { id: cleanCode }
+        : { registrationCode: cleanCode.toUpperCase() },
       select: {
         id: true,
+        registrationCode: true,
         event: {
           select: {
             slug: true,
@@ -85,7 +94,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     }
 
     const updatedPayment = await submitPaymentReference(
-      code,
+      cleanCode,
       parseResult.data.userReference
     );
 
@@ -93,6 +102,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
       {
         success: true,
         payment: updatedPayment,
+        registrationCode: registration.registrationCode,
       },
       { status: 200 }
     );

@@ -313,7 +313,7 @@ describe("Phase 7: Dynamic Form Engine Validation Specification", () => {
         participant_type: "CRESCENT",
         participant_name: "Aadhya Sharma",
         email_address: "aadhya@crescent.education",
-        phone_number: "+919876543210",
+        phone_number: "9876543210",
         crescent_rrn: "210011601045",
         agree_terms: true,
       };
@@ -328,7 +328,7 @@ describe("Phase 7: Dynamic Form Engine Validation Specification", () => {
         participant_type: "EXTERNAL",
         participant_name: "Rahul Verma",
         email_address: "rahul@othercollege.edu",
-        phone_number: "+919876543222",
+        phone_number: "9876543222",
         college_name: "Loyola College",
         agree_terms: true,
       };
@@ -342,7 +342,7 @@ describe("Phase 7: Dynamic Form Engine Validation Specification", () => {
         participant_type: "CRESCENT",
         participant_name: "Aadhya Sharma",
         email_address: "aadhya@crescent.education",
-        phone_number: "+919876543210",
+        phone_number: "9876543210",
         crescent_rrn: "",
         agree_terms: true,
       };
@@ -357,7 +357,7 @@ describe("Phase 7: Dynamic Form Engine Validation Specification", () => {
         participant_type: "CRESCENT",
         participant_name: "Aadhya Sharma",
         email_address: "aadhya@crescent.education",
-        phone_number: "+919876543210",
+        phone_number: "9876543210",
         crescent_rrn: "12345", // Invalid RRN format
         agree_terms: true,
       };
@@ -372,7 +372,7 @@ describe("Phase 7: Dynamic Form Engine Validation Specification", () => {
         participant_type: "EXTERNAL",
         participant_name: "Rahul Verma",
         email_address: "not-an-email",
-        phone_number: "+919876543222",
+        phone_number: "9876543222",
         college_name: "Loyola College",
         agree_terms: true,
       };
@@ -382,12 +382,40 @@ describe("Phase 7: Dynamic Form Engine Validation Specification", () => {
       expect(result.errors?.email_address).toContain("valid email");
     });
 
+    it("enforces strict 10-digit mobile phone validation", () => {
+      const baseValues = {
+        participant_type: "EXTERNAL",
+        participant_name: "Rahul Verma",
+        email_address: "rahul@loyola.edu",
+        college_name: "Loyola College",
+        agree_terms: true,
+      };
+
+      // Exactly 10 digits passes
+      expect(validateFormSubmission(fields, { ...baseValues, phone_number: "9876543210" }).success).toBe(true);
+
+      // 9 digits fails
+      const shortRes = validateFormSubmission(fields, { ...baseValues, phone_number: "987654321" });
+      expect(shortRes.success).toBe(false);
+      expect(shortRes.errors?.phone_number).toContain("10-digit");
+
+      // 11 digits fails
+      const longRes = validateFormSubmission(fields, { ...baseValues, phone_number: "98765432100" });
+      expect(longRes.success).toBe(false);
+      expect(longRes.errors?.phone_number).toContain("10-digit");
+
+      // Non-digits fails
+      const nonDigitRes = validateFormSubmission(fields, { ...baseValues, phone_number: "+919876543210" });
+      expect(nonDigitRes.success).toBe(false);
+      expect(nonDigitRes.errors?.phone_number).toContain("10-digit");
+    });
+
     it("enforces checkbox required status (must be true)", () => {
       const values = {
         participant_type: "EXTERNAL",
         participant_name: "Rahul Verma",
         email_address: "rahul@loyola.edu",
-        phone_number: "+919876543222",
+        phone_number: "9876543222",
         college_name: "Loyola College",
         agree_terms: false,
       };
@@ -403,7 +431,7 @@ describe("Phase 7: Dynamic Form Engine Validation Specification", () => {
         participant_type: "EXTERNAL",
         participant_name: "Rahul Verma",
         email_address: "rahul@loyola.edu",
-        phone_number: "+919876543222",
+        phone_number: "9876543222",
         college_name: "Loyola College",
         crescent_rrn: "210011601099", // Previously filled value for hidden branch
         agree_terms: true,

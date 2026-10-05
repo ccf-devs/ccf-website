@@ -437,14 +437,26 @@ export function TeamRosterBuilder({
                   </Label>
                   <Input
                     id={`member_${index}_phone`}
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={10}
                     placeholder="e.g. 9876543210"
                     value={member.phone || ""}
                     onChange={(e) =>
-                      handleMemberFieldChange(index, "phone", e.target.value)
+                      handleMemberFieldChange(
+                        index,
+                        "phone",
+                        e.target.value.replace(/\D/g, "").slice(0, 10)
+                      )
                     }
                     disabled={disabled}
                     className="bg-ccf-surface border-border/60 text-xs font-mono h-9"
                   />
+                  {errors[`${memberErrorKey}.phone`] && (
+                    <p className="text-[11px] text-red-400">
+                      {errors[`${memberErrorKey}.phone`]}
+                    </p>
+                  )}
                 </div>
 
                 {/* Optional Department */}

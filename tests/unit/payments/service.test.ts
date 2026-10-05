@@ -85,7 +85,12 @@ describe("Payment Service Layer (Phase 10)", () => {
 
       expect(prisma.payment.update).toHaveBeenCalledWith({
         where: { id: "pay-1" },
-        data: { userReference: "408112345678" },
+        data: {
+          userReference: "408112345678",
+          status: PaymentStatus.PENDING,
+          verifiedBy: null,
+          verifiedAt: null,
+        },
       });
       expect(result.status).toBe(PaymentStatus.PENDING);
       expect(result.userReference).toBe("408112345678");
@@ -162,14 +167,14 @@ describe("Payment Service Layer (Phase 10)", () => {
       });
 
       await expect(
-        submitPaymentReference("CCF-PAID-1234", "NEW-UTR-999999")
+        submitPaymentReference("CCF-PAID-1234", "408199999999")
       ).rejects.toMatchObject({
         code: PaymentErrorCode.ALREADY_VERIFIED,
         statusCode: 400,
       });
     });
 
-    it("throws INVALID_PAYMENT_STATE when submitting UTR on a REJECTED payment and does not call payment.update", async () => {
+    it("allows resubmitting UTR on a REJECTED payment and resets status to PENDING", async () => {
       (prisma.registration.findUnique as any).mockResolvedValue({
         id: "reg-1",
         registrationCode: "CCF-REJ-1234",
@@ -186,14 +191,57 @@ describe("Payment Service Layer (Phase 10)", () => {
         },
       });
 
-      await expect(
-        submitPaymentReference("CCF-REJ-1234", "408112345678")
-      ).rejects.toMatchObject({
-        code: PaymentErrorCode.INVALID_PAYMENT_STATE,
-        statusCode: 400,
+      (prisma.payment.update as any).mockResolvedValue({
+        id: "pay-1",
+        status: PaymentStatus.PENDING,
+        method: PaymentMethod.MANUAL_UPI,
+        amount: 250,
+        currency: "INR",
+        userReference: "408112345678",
       });
 
-      expect(prisma.payment.update).not.toHaveBeenCalled();
+      const result = await submitPaymentReference("CCF-REJ-1234", "408112345678");
+      expect(result.status).toBe(PaymentStatus.PENDING);
+      expect(result.userReference).toBe("408112345678");
+      expect(prisma.payment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "pay-1" },
+          data: expect.objectContaining({
+            status: PaymentStatus.PENDING,
+            userReference: "408112345678",
+          }),
+        })
+      );
+    });
+
+    it("successfully submits UTR when referenced by registration UUID id", async () => {
+      (prisma.registration.findUnique as any).mockResolvedValue({
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        registrationCode: "CCF-MAG-1234",
+        event: {
+          id: "ev-1",
+          registrationMode: RegistrationMode.INTERNAL,
+          paymentMode: PaymentMode.PAID,
+        },
+        payment: {
+          id: "pay-1",
+          status: PaymentStatus.PENDING,
+          method: PaymentMethod.MANUAL_UPI,
+          amount: 250,
+        },
+      });
+
+      (prisma.payment.update as any).mockResolvedValue({
+        id: "pay-1",
+        status: PaymentStatus.PENDING,
+        method: PaymentMethod.MANUAL_UPI,
+        amount: 250,
+        currency: "INR",
+        userReference: "408112345678",
+      });
+
+      const result = await submitPaymentReference("a1b2c3d4-e5f6-7890-abcd-ef1234567890", "408112345678");
+      expect(result.userReference).toBe("408112345678");
     });
 
     it("throws INVALID_PAYMENT_STATE when submitting UTR on a REFUNDED payment", async () => {
@@ -386,6 +434,28 @@ describe("Payment Service Layer (Phase 10)", () => {
         code: PaymentErrorCode.INVALID_PAYMENT_STATE,
         statusCode: 400,
       });
+    });
+
+    it("throws INVALID_PAYMENT_STATE when trying to verify a payment without userReference (UTR)", async () => {
+      (prisma.registration.findUnique as any).mockResolvedValue({
+        id: "reg-1",
+        event: {
+          paymentMode: PaymentMode.PAID,
+        },
+        payment: {
+          id: "pay-1",
+          status: PaymentStatus.PENDING,
+          userReference: null,
+        },
+      });
+
+      await expect(
+        verifyPaymentByAdmin("reg-1", "admin-1")
+      ).rejects.toMatchObject({
+        code: PaymentErrorCode.INVALID_PAYMENT_STATE,
+        statusCode: 400,
+      });
+      expect(prisma.payment.update).not.toHaveBeenCalled();
     });
 
     it("transitions REJECTED payment to VERIFIED (REJECTED -> VERIFIED)", async () => {

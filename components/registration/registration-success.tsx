@@ -28,6 +28,19 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
 
   // Payment state
   const isPaid = Boolean(confirmation.payment);
+  const initialHasReference = Boolean(
+    confirmation.payment?.userReference &&
+      confirmation.payment?.status !== "REJECTED"
+  );
+  const initialIsVerified = confirmation.payment?.status === "VERIFIED";
+
+  const [revealedRegistrationCode, setRevealedRegistrationCode] =
+    React.useState<string | null>(() => {
+      if (isPaid && !initialHasReference && !initialIsVerified) {
+        return null;
+      }
+      return confirmation.registrationCode || null;
+    });
   const [qrDataUrl, setQrDataUrl] = React.useState<string | null>(null);
   const [qrLoading, setQrLoading] = React.useState(Boolean(confirmation.payment?.paymentUri));
   const [currentPaymentStatus, setCurrentPaymentStatus] = React.useState(
@@ -46,8 +59,9 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
   const [referenceError, setReferenceError] = React.useState<string | null>(null);
 
   const copyToClipboard = async () => {
+    if (!revealedRegistrationCode) return;
     try {
-      await navigator.clipboard.writeText(confirmation.registrationCode);
+      await navigator.clipboard.writeText(revealedRegistrationCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -86,19 +100,20 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
 
     const trimmed = userReference.trim();
     if (!trimmed) {
-      setReferenceError("Please enter your 12-digit UPI UTR or transaction reference number.");
+      setReferenceError("Please enter your 12-digit UPI UTR number.");
       return;
     }
 
-    if (trimmed.length < 6 || trimmed.length > 50) {
-      setReferenceError("Payment reference must be between 6 and 50 characters.");
+    if (!/^\d{12}$/.test(trimmed)) {
+      setReferenceError("Payment reference / UTR must be exactly 12 numeric digits.");
       return;
     }
 
     setSubmittingReference(true);
     try {
+      const identifier = revealedRegistrationCode || confirmation.registrationCode || confirmation.id;
       const res = await fetch(
-        `/api/events/${confirmation.event.slug}/registrations/${confirmation.registrationCode}/payment-reference`,
+        `/api/events/${confirmation.event.slug}/registrations/${identifier}/payment-reference`,
         {
           method: "POST",
           headers: {
@@ -116,9 +131,12 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
       }
 
       setReferenceSubmitted(true);
-      setReferenceSuccessMsg("UTR reference submitted successfully! Awaiting admin verification.");
+      setReferenceSuccessMsg("Your payment details have been submitted and are awaiting verification by the CCF team.");
       if (data.payment?.status) {
         setCurrentPaymentStatus(data.payment.status);
+      }
+      if (data.registrationCode) {
+        setRevealedRegistrationCode(data.registrationCode);
       }
     } catch {
       setReferenceError("Network error while submitting reference. Please try again.");
@@ -126,6 +144,74 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
       setSubmittingReference(false);
     }
   };
+
+  const hasSubmittedReference =
+    referenceSubmitted && currentPaymentStatus !== "REJECTED";
+  const isVerified = currentPaymentStatus === "VERIFIED";
+  const isRejected = currentPaymentStatus === "REJECTED";
+
+  let statusTag: string;
+  let statusTagColor: string;
+  let mainTitle: string;
+  let headerDescription: React.ReactNode;
+
+  if (!isPaid) {
+    statusTag = "REGISTRATION SUCCESSFUL";
+    statusTagColor = "text-emerald-400";
+    mainTitle = "You're Registered!";
+    headerDescription = (
+      <>
+        Your registration for{" "}
+        <span className="text-ccf-offwhite font-medium">
+          {confirmation.event?.name || (confirmation as any).eventName || "this event"}
+        </span>{" "}
+        has been confirmed.
+      </>
+    );
+  } else if (isVerified) {
+    statusTag = "REGISTRATION CONFIRMED";
+    statusTagColor = "text-emerald-400";
+    mainTitle = "Registration Confirmed";
+    headerDescription = (
+      <>
+        Your payment has been verified and your registration for{" "}
+        <span className="text-ccf-offwhite font-medium">
+          {confirmation.event?.name || (confirmation as any).eventName || "this event"}
+        </span>{" "}
+        is confirmed.
+      </>
+    );
+  } else if (isRejected) {
+    statusTag = "PAYMENT REJECTED";
+    statusTagColor = "text-red-400";
+    mainTitle = "Payment Rejected";
+    headerDescription = (
+      <>
+        Your payment reference could not be verified by the CCF team. Please check your transaction details and resubmit your 12-digit UTR below.
+      </>
+    );
+  } else if (hasSubmittedReference) {
+    statusTag = "PAYMENT SUBMITTED";
+    statusTagColor = "text-amber-400";
+    mainTitle = "Payment Submitted";
+    headerDescription = (
+      <>
+        Your payment details have been submitted and are awaiting verification by the CCF team.
+      </>
+    );
+  } else {
+    statusTag = "PAYMENT REQUIRED";
+    statusTagColor = "text-amber-400";
+    mainTitle = "Complete Your Payment";
+    headerDescription = (
+      <>
+        Please complete your payment via UPI to proceed with your registration for{" "}
+        <span className="text-ccf-offwhite font-medium">
+          {confirmation.event?.name || (confirmation as any).eventName || "this event"}
+        </span>.
+      </>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
@@ -145,47 +231,45 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
 
         {/* Header */}
         <div className="space-y-2">
-          <span className="editorial-tag text-emerald-400">REGISTRATION SUCCESSFUL</span>
+          <span className={`editorial-tag ${statusTagColor}`}>{statusTag}</span>
           <h1 className="text-2xl md:text-3xl font-bold text-ccf-offwhite tracking-tight">
-            You&apos;re Registered!
+            {mainTitle}
           </h1>
           <p className="text-sm text-ccf-muted max-w-md mx-auto">
-            Your registration for{" "}
-            <span className="text-ccf-offwhite font-medium">
-              {confirmation.event?.name || (confirmation as any).eventName || "this event"}
-            </span>{" "}
-            has been confirmed.
+            {headerDescription}
           </p>
         </div>
 
-        {/* Registration Code Display */}
-        <div className="bg-ccf-surface-elevated/80 border border-border/60 rounded-xl p-5 space-y-2 max-w-md mx-auto">
-          <span className="text-xs uppercase font-mono tracking-wider text-ccf-muted">
-            Registration Code
-          </span>
-          <div className="flex items-center justify-center gap-3">
-            <span className="text-xl md:text-2xl font-mono font-bold text-ccf-gold tracking-wide">
-              {confirmation.registrationCode}
+        {/* Registration Code Display (withheld for paid events until UTR submission) */}
+        {revealedRegistrationCode && (
+          <div className="bg-ccf-surface-elevated/80 border border-border/60 rounded-xl p-5 space-y-2 max-w-md mx-auto">
+            <span className="text-xs uppercase font-mono tracking-wider text-ccf-muted">
+              Registration Code
             </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={copyToClipboard}
-              className="h-8 px-2 text-xs border-border/50 hover:border-ccf-gold"
-              title="Copy registration code"
-            >
-              {copied ? (
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
-            </Button>
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-xl md:text-2xl font-mono font-bold text-ccf-gold tracking-wide">
+                {revealedRegistrationCode}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={copyToClipboard}
+                className="h-8 px-2 text-xs border-border/50 hover:border-ccf-gold"
+                title="Copy registration code"
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </div>
+            <p className="text-[11px] text-ccf-muted">
+              Save this code for event check-in and future correspondence.
+            </p>
           </div>
-          <p className="text-[11px] text-ccf-muted">
-            Save this code for event check-in and future correspondence.
-          </p>
-        </div>
+        )}
 
         {/* Team Details (If Team Registration) */}
         {confirmation.registrationType === "TEAM" && (
@@ -250,7 +334,13 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
                 <QrCode className="h-4 w-4" />
-                Payment Required
+                {isVerified
+                  ? "Payment Verified"
+                  : isRejected
+                  ? "Payment Rejected"
+                  : hasSubmittedReference
+                  ? "Payment Submitted"
+                  : "Payment Required"}
               </span>
               <Badge
                 variant={
@@ -258,11 +348,19 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
                     ? "success"
                     : currentPaymentStatus === "REJECTED"
                     ? "destructive"
-                    : "warning"
+                    : hasSubmittedReference
+                    ? "warning"
+                    : "secondary"
                 }
                 className="text-[10px] font-mono"
               >
-                {currentPaymentStatus}
+                {currentPaymentStatus === "VERIFIED"
+                  ? "VERIFIED"
+                  : currentPaymentStatus === "REJECTED"
+                  ? "REJECTED"
+                  : hasSubmittedReference
+                  ? "SUBMITTED"
+                  : "PENDING"}
               </Badge>
             </div>
 
@@ -323,7 +421,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
                 </div>
 
                 {/* Mobile UPI Intent Button */}
-                <Button asChild variant="gold" size="sm" className="w-full">
+                <Button asChild variant="gold" size="sm" className="w-full md:hidden">
                   <a
                     href={confirmation.payment.paymentUri}
                     target="_blank"
@@ -344,7 +442,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
                   Submit Payment Reference (UTR)
                 </span>
                 <span className="text-[11px] text-ccf-muted block">
-                  After completing your UPI transfer, enter your 12-digit transaction UTR number below.
+                  After completing the payment, enter your 12-digit UTR below. Your payment will be verified by the CCF team.
                 </span>
               </div>
 
@@ -352,8 +450,12 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
                 <div className="flex gap-2">
                   <Input
                     type="text"
+                    inputMode="numeric"
+                    maxLength={12}
                     value={userReference}
-                    onChange={(e) => setUserReference(e.target.value)}
+                    onChange={(e) =>
+                      setUserReference(e.target.value.replace(/\D/g, "").slice(0, 12))
+                    }
                     placeholder="e.g. 408112345678 (12-digit UTR)"
                     disabled={submittingReference || currentPaymentStatus === "VERIFIED"}
                     className="h-9 text-xs font-mono bg-ccf-surface border-border/80 focus-visible:border-ccf-gold"
@@ -367,7 +469,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
                   >
                     {submittingReference ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : referenceSubmitted ? (
+                    ) : hasSubmittedReference ? (
                       "Update UTR"
                     ) : (
                       "Submit UTR"
@@ -391,7 +493,7 @@ export function RegistrationSuccess({ confirmation }: RegistrationSuccessProps) 
               </form>
 
               <p className="text-[11px] text-ccf-muted italic">
-                Initiation is not proof of payment. Payment will be verified manually by CCF finance administrators.
+                After completing the payment, enter your 12-digit UTR below. Your payment will be verified by the CCF team.
               </p>
             </div>
           </div>

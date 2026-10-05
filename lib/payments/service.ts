@@ -21,21 +21,22 @@ import { normalizeAndValidatePaymentReference } from "./upi";
  * Public participant submission or update of their payment UTR / reference.
  *
  * Rules:
- * - Registration must exist and match registrationCode.
+ * - Registration must exist and match registrationCode or registration UUID.
  * - Event must be INTERNAL and PAID.
  * - Payment must exist.
- * - Reference must be valid (6–50 characters, safe format).
- * - Status strictly remains PENDING (public users can NEVER verify payments).
+ * - Reference must be valid (exactly 12 numeric digits).
+ * - Status strictly remains/resets to PENDING awaiting verification (public users can NEVER verify payments).
+ * - Allows resubmission if payment was previously REJECTED.
  * - Prevents unsafe overwrite if payment is already VERIFIED.
  */
 export async function submitPaymentReference(
-  registrationCode: string,
+  registrationCodeOrId: string,
   userReference: string
 ): Promise<PaymentPublicView> {
-  const code = (registrationCode || "").trim().toUpperCase();
-  if (!code) {
+  const cleanIdOrCode = (registrationCodeOrId || "").trim();
+  if (!cleanIdOrCode) {
     throw new PaymentDomainError(
-      "Registration code is required.",
+      "Registration identifier is required.",
       PaymentErrorCode.INVALID_REQUEST,
       400
     );
@@ -43,8 +44,12 @@ export async function submitPaymentReference(
 
   const cleanReference = normalizeAndValidatePaymentReference(userReference);
 
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanIdOrCode);
+
   const registration = await prisma.registration.findUnique({
-    where: { registrationCode: code },
+    where: isUuid
+      ? { id: cleanIdOrCode }
+      : { registrationCode: cleanIdOrCode.toUpperCase() },
     include: {
       event: {
         select: {
@@ -92,9 +97,12 @@ export async function submitPaymentReference(
     );
   }
 
-  if (registration.payment.status !== PaymentStatus.PENDING) {
+  if (
+    registration.payment.status !== PaymentStatus.PENDING &&
+    registration.payment.status !== PaymentStatus.REJECTED
+  ) {
     throw new PaymentDomainError(
-      `Cannot submit payment reference for a payment in ${registration.payment.status} state. Only PENDING payments accept reference submissions.`,
+      `Cannot submit payment reference for a payment in ${registration.payment.status} state. Only PENDING or REJECTED payments accept reference submissions.`,
       PaymentErrorCode.INVALID_PAYMENT_STATE,
       400
     );
@@ -104,6 +112,9 @@ export async function submitPaymentReference(
     where: { id: registration.payment.id },
     data: {
       userReference: cleanReference,
+      status: PaymentStatus.PENDING,
+      verifiedBy: null,
+      verifiedAt: null,
     },
   });
 
@@ -221,6 +232,14 @@ export async function verifyPaymentByAdmin(
     ) {
       throw new PaymentDomainError(
         `Cannot verify a payment in ${registration.payment.status} state.`,
+        PaymentErrorCode.INVALID_PAYMENT_STATE,
+        400
+      );
+    }
+
+    if (!registration.payment.userReference || !registration.payment.userReference.trim()) {
+      throw new PaymentDomainError(
+        "Cannot verify payment: no payment reference (UTR) has been submitted by the registrant.",
         PaymentErrorCode.INVALID_PAYMENT_STATE,
         400
       );
