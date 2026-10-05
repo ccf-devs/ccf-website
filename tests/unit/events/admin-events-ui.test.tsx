@@ -227,5 +227,59 @@ describe("Admin Event Management UI Components (Phase 6)", () => {
       expect(html).toContain("Prepopulated overview");
       expect(html).toContain("Update Event");
     });
+
+    it("verifies registration settings UI behaviors for INTERNAL, EXTERNAL, and NONE modes", () => {
+      // INTERNAL mode: shows BUILT_IN and CCF Form Engine Enabled
+      const internalHtml = renderToStaticMarkup(
+        <EventForm
+          mode="edit"
+          eventId="evt-1"
+          initialData={{
+            name: "Internal Event",
+            registrationMode: RegistrationMode.INTERNAL,
+            registrationMethod: RegistrationMethod.BUILT_IN,
+          }}
+        />
+      );
+      expect(internalHtml).toContain("CCF Form Engine Enabled");
+      expect(internalHtml).toContain("BUILT_IN (CCF Form Engine)");
+      expect(internalHtml).not.toContain("External Registration URL");
+
+      // EXTERNAL mode: exposes GOOGLE_FORM and EXTERNAL_LINK, shows URL input, does NOT show CCF Form Engine
+      const externalHtml = renderToStaticMarkup(
+        <EventForm
+          mode="edit"
+          eventId="evt-2"
+          initialData={{
+            name: "External Event",
+            registrationMode: RegistrationMode.EXTERNAL,
+            registrationMethod: RegistrationMethod.GOOGLE_FORM,
+            externalUrl: "https://forms.google.com/test",
+          }}
+        />
+      );
+      expect(externalHtml).toContain("GOOGLE_FORM (Google Form)");
+      expect(externalHtml).toContain("EXTERNAL_LINK (External Link)");
+      expect(externalHtml).toContain("External Registration URL");
+      expect(externalHtml).toContain('value="https://forms.google.com/test"');
+      expect(externalHtml).not.toContain("CCF Form Engine Enabled");
+      expect(externalHtml).not.toContain("BUILT_IN (CCF Form Engine)");
+
+      // NONE mode: no registration method select or external URL input
+      const noneHtml = renderToStaticMarkup(
+        <EventForm
+          mode="edit"
+          eventId="evt-3"
+          initialData={{
+            name: "None Event",
+            registrationMode: RegistrationMode.NONE,
+            registrationMethod: RegistrationMethod.NONE,
+          }}
+        />
+      );
+      expect(noneHtml).not.toContain("CCF Form Engine Enabled");
+      expect(noneHtml).not.toContain("External Registration URL");
+      expect(noneHtml).not.toContain("GOOGLE_FORM (Google Form)");
+    });
   });
 });

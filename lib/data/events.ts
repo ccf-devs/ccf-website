@@ -40,7 +40,8 @@ export interface CcfEvent {
   registrationState?: string;
   imageObjectKey?: string;
   registrationMode?: "NONE" | "INTERNAL" | "EXTERNAL";
-  registrationMethod?: "NONE" | "BUILT_IN" | "GOOGLE_FORM";
+  registrationMethod?: "NONE" | "BUILT_IN" | "GOOGLE_FORM" | "EXTERNAL_LINK";
+  externalUrl?: string | null;
   registrationOpensAt?: string | null;
   registrationClosesAt?: string | null;
   externalRegistrationUrl?: string | null;
@@ -166,6 +167,7 @@ export function toPublicEventSummary(dbEvent: {
   venue?: string | null;
   registrationMode?: string | null;
   registrationMethod?: string | null;
+  externalUrl?: string | null;
   registrationOpensAt?: Date | string | null;
   registrationClosesAt?: Date | string | null;
   content?: {
@@ -192,12 +194,12 @@ export function toPublicEventSummary(dbEvent: {
   const desc = stripMarkdown(dbEvent.content?.descriptionRich || "");
   const shortDesc = desc.length > 160 ? desc.slice(0, 157) + "..." : desc;
 
-  let externalRegistrationUrl: string | null = null;
-  const potentialUrl = dbEvent.content?.instructionsRich || dbEvent.content?.notesRich || "";
-  const match = potentialUrl.match(/https?:\/\/[^\s"']+/);
-  if (match) {
-    externalRegistrationUrl = match[0];
-  }
+  const extUrl = dbEvent.externalUrl || null;
+
+
+
+
+
 
   return {
     id: dbEvent.id,
@@ -218,7 +220,8 @@ export function toPublicEventSummary(dbEvent: {
     registrationClosesAt: dbEvent.registrationClosesAt
       ? new Date(dbEvent.registrationClosesAt).toISOString()
       : null,
-    externalRegistrationUrl,
+    externalUrl: extUrl,
+    externalRegistrationUrl: extUrl,
     content: dbEvent.content
       ? {
           descriptionRich: dbEvent.content.descriptionRich,

@@ -52,6 +52,7 @@ export interface EventFormInitialData {
   capacity?: number | null;
   registrationMode?: RegistrationMode | string;
   registrationMethod?: RegistrationMethod | string;
+  externalUrl?: string | null;
   eligibilityCrescent?: boolean;
   eligibilityExternal?: boolean;
   registrationOpensAt?: Date | string | null;
@@ -125,6 +126,40 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
   const [registrationMethod, setRegistrationMethod] = useState<RegistrationMethod>(
     (initialData.registrationMethod as RegistrationMethod) || RegistrationMethod.NONE
   );
+  const [externalUrl, setExternalUrl] = useState<string>(
+    initialData.externalUrl || ""
+  );
+
+  const clearErrorKeys = (...keys: string[]) => {
+    setErrors((prev) => {
+      const next = { ...prev };
+      for (const k of keys) {
+        delete next[k];
+      }
+      return next;
+    });
+  };
+
+  const handleRegistrationModeChange = (mode: RegistrationMode) => {
+    setRegistrationMode(mode);
+    clearErrorKeys("registrationMode");
+    if (mode === RegistrationMode.NONE) {
+      setRegistrationMethod(RegistrationMethod.NONE);
+      setExternalUrl("");
+      clearErrorKeys("registrationMethod", "externalUrl");
+    } else if (mode === RegistrationMode.INTERNAL) {
+      setRegistrationMethod(RegistrationMethod.BUILT_IN);
+      setExternalUrl("");
+      clearErrorKeys("registrationMethod", "externalUrl");
+    } else if (mode === RegistrationMode.EXTERNAL) {
+      if (
+        registrationMethod !== RegistrationMethod.GOOGLE_FORM &&
+        registrationMethod !== RegistrationMethod.EXTERNAL_LINK
+      ) {
+        setRegistrationMethod(RegistrationMethod.GOOGLE_FORM);
+      }
+    }
+  };
   const [eligibilityCrescent, setEligibilityCrescent] = useState<boolean>(
     initialData.eligibilityCrescent ?? false
   );
@@ -203,7 +238,16 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
           ? parseInt(capacity, 10)
           : null,
       registrationMode,
-      registrationMethod,
+      registrationMethod:
+        registrationMode === RegistrationMode.NONE
+          ? RegistrationMethod.NONE
+          : registrationMode === RegistrationMode.INTERNAL
+          ? RegistrationMethod.BUILT_IN
+          : registrationMethod,
+      externalUrl:
+        registrationMode === RegistrationMode.EXTERNAL
+          ? externalUrl.trim() || null
+          : null,
       eligibilityCrescent,
       eligibilityExternal,
       registrationOpensAt: registrationOpensAt
@@ -514,15 +558,9 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
             <Select
               id="event-reg-mode"
               value={registrationMode}
-              onChange={(e) => {
-                const mode = e.target.value as RegistrationMode;
-                setRegistrationMode(mode);
-                if (mode === RegistrationMode.NONE) {
-                  setRegistrationMethod(RegistrationMethod.NONE);
-                } else if (registrationMethod === RegistrationMethod.NONE) {
-                  setRegistrationMethod(RegistrationMethod.BUILT_IN);
-                }
-              }}
+              onChange={(e) =>
+                handleRegistrationModeChange(e.target.value as RegistrationMode)
+              }
             >
               <option value={RegistrationMode.NONE} className="bg-ccf-surface">
                 NONE (No Registration)
@@ -539,32 +577,20 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
             )}
           </div>
 
-          <div className="md:col-span-6 space-y-1.5">
-            <Label htmlFor="event-reg-method" required>
-              Registration Method
-            </Label>
-            <Select
-              id="event-reg-method"
-              value={registrationMethod}
-              onChange={(e) =>
-                setRegistrationMethod(e.target.value as RegistrationMethod)
-              }
-            >
-              <option value={RegistrationMethod.NONE} className="bg-ccf-surface">
-                NONE
-              </option>
-              <option value={RegistrationMethod.BUILT_IN} className="bg-ccf-surface">
-                BUILT_IN (CCF Form Engine)
-              </option>
-              <option value={RegistrationMethod.GOOGLE_FORM} className="bg-ccf-surface">
-                GOOGLE_FORM (Google Form Fallback)
-              </option>
-            </Select>
-            {errors.registrationMethod && (
-              <p className="text-xs text-red-400 mt-1">{errors.registrationMethod}</p>
-            )}
+          {registrationMode === RegistrationMode.INTERNAL && (
+            <div className="md:col-span-6 space-y-1.5">
+              <Label htmlFor="event-reg-method" required>
+                Registration Method
+              </Label>
+              <Select id="event-reg-method" value={RegistrationMethod.BUILT_IN} disabled>
+                <option value={RegistrationMethod.BUILT_IN} className="bg-ccf-surface">
+                  BUILT_IN (CCF Form Engine)
+                </option>
+              </Select>
+              {errors.registrationMethod && (
+                <p className="text-xs text-red-400 mt-1">{errors.registrationMethod}</p>
+              )}
 
-            {registrationMethod === RegistrationMethod.BUILT_IN && (
               <div className="mt-2 rounded-lg border border-ccf-gold/30 bg-ccf-gold/5 p-3 text-xs text-ccf-muted flex items-start gap-2.5">
                 <Info className="h-4 w-4 text-ccf-gold shrink-0 mt-0.5" aria-hidden="true" />
                 <div className="space-y-0.5">
@@ -584,8 +610,58 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
                   )}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {registrationMode === RegistrationMode.EXTERNAL && (
+            <>
+              <div className="md:col-span-6 space-y-1.5">
+                <Label htmlFor="event-reg-method" required>
+                  Registration Method
+                </Label>
+                <Select
+                  id="event-reg-method"
+                  value={registrationMethod}
+                  onChange={(e) => {
+                    setRegistrationMethod(e.target.value as RegistrationMethod);
+                    clearErrorKeys("registrationMethod");
+                  }}
+                >
+                  <option value={RegistrationMethod.GOOGLE_FORM} className="bg-ccf-surface">
+                    GOOGLE_FORM (Google Form)
+                  </option>
+                  <option value={RegistrationMethod.EXTERNAL_LINK} className="bg-ccf-surface">
+                    EXTERNAL_LINK (External Link)
+                  </option>
+                </Select>
+                {errors.registrationMethod && (
+                  <p className="text-xs text-red-400 mt-1">{errors.registrationMethod}</p>
+                )}
+              </div>
+
+              <div className="col-span-12 space-y-1.5">
+                <Label htmlFor="event-external-url" required>
+                  External Registration URL
+                </Label>
+                <Input
+                  id="event-external-url"
+                  type="url"
+                  placeholder="https://forms.gle/... or https://..."
+                  value={externalUrl}
+                  onChange={(e) => {
+                    setExternalUrl(e.target.value);
+                    clearErrorKeys("externalUrl");
+                  }}
+                />
+                <p className="text-xs text-ccf-muted">
+                  The destination where attendees will be directed to register for this event.
+                </p>
+                {errors.externalUrl && (
+                  <p className="text-xs text-red-400 mt-1">{errors.externalUrl}</p>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Registration Window */}
           <div className="md:col-span-6 space-y-1.5">

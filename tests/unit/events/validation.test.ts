@@ -31,7 +31,7 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
     registrationMethod: RegistrationMethod.BUILT_IN,
     eligibilityCrescent: true,
     eligibilityExternal: true,
-    registrationOpensAt: "2026-10-05T00:00:00.000Z",
+    registrationOpensAt: "2026-10-06T00:00:00.000Z",
     registrationClosesAt: "2026-10-10T23:59:59.000Z",
     paymentMode: PaymentMode.FREE,
     descriptionRich: "Symposium on algorithmic finance and quantitative trading.",
@@ -132,30 +132,169 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
     });
 
     it("enforces registration mode vs method consistency (Correction 3)", () => {
-      // NONE mode must have NONE method
+      // VALID combinations
+      // 1. NONE + NONE (no external URL)
       const validNone = createEventSchema.safeParse({
         ...validBaseEvent,
         registrationMode: RegistrationMode.NONE,
         registrationMethod: RegistrationMethod.NONE,
+        externalUrl: null,
         eligibilityCrescent: false,
         eligibilityExternal: false,
       });
       expect(validNone.success).toBe(true);
 
-      const invalidNone = createEventSchema.safeParse({
-        ...validBaseEvent,
-        registrationMode: RegistrationMode.NONE,
-        registrationMethod: RegistrationMethod.BUILT_IN,
-      });
-      expect(invalidNone.success).toBe(false);
-
-      // Non-NONE mode must specify a method other than NONE
-      const invalidActive = createEventSchema.safeParse({
+      // 2. INTERNAL + BUILT_IN (no external URL)
+      const validInternal = createEventSchema.safeParse({
         ...validBaseEvent,
         registrationMode: RegistrationMode.INTERNAL,
-        registrationMethod: RegistrationMethod.NONE,
+        registrationMethod: RegistrationMethod.BUILT_IN,
+        externalUrl: null,
       });
-      expect(invalidActive.success).toBe(false);
+      expect(validInternal.success).toBe(true);
+
+      // 3. EXTERNAL + GOOGLE_FORM + valid URL
+      const validGoogleForm = createEventSchema.safeParse({
+        ...validBaseEvent,
+        registrationMode: RegistrationMode.EXTERNAL,
+        registrationMethod: RegistrationMethod.GOOGLE_FORM,
+        externalUrl: "https://forms.google.com/test-form",
+      });
+      expect(validGoogleForm.success).toBe(true);
+
+      // 4. EXTERNAL + EXTERNAL_LINK + valid URL
+      const validExternalLink = createEventSchema.safeParse({
+        ...validBaseEvent,
+        registrationMode: RegistrationMode.EXTERNAL,
+        registrationMethod: RegistrationMethod.EXTERNAL_LINK,
+        externalUrl: "https://events.example.com/register",
+      });
+      expect(validExternalLink.success).toBe(true);
+
+      // INVALID combinations
+      // NONE + BUILT_IN
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.NONE,
+          registrationMethod: RegistrationMethod.BUILT_IN,
+        }).success
+      ).toBe(false);
+
+      // NONE + GOOGLE_FORM
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.NONE,
+          registrationMethod: RegistrationMethod.GOOGLE_FORM,
+        }).success
+      ).toBe(false);
+
+      // NONE + EXTERNAL_LINK
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.NONE,
+          registrationMethod: RegistrationMethod.EXTERNAL_LINK,
+        }).success
+      ).toBe(false);
+
+      // INTERNAL + NONE
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.INTERNAL,
+          registrationMethod: RegistrationMethod.NONE,
+        }).success
+      ).toBe(false);
+
+      // INTERNAL + GOOGLE_FORM
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.INTERNAL,
+          registrationMethod: RegistrationMethod.GOOGLE_FORM,
+        }).success
+      ).toBe(false);
+
+      // INTERNAL + EXTERNAL_LINK
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.INTERNAL,
+          registrationMethod: RegistrationMethod.EXTERNAL_LINK,
+        }).success
+      ).toBe(false);
+
+      // EXTERNAL + NONE
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.EXTERNAL,
+          registrationMethod: RegistrationMethod.NONE,
+          externalUrl: "https://forms.google.com/test",
+        }).success
+      ).toBe(false);
+
+      // EXTERNAL + BUILT_IN
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.EXTERNAL,
+          registrationMethod: RegistrationMethod.BUILT_IN,
+          externalUrl: "https://forms.google.com/test",
+        }).success
+      ).toBe(false);
+
+      // EXTERNAL without URL
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.EXTERNAL,
+          registrationMethod: RegistrationMethod.GOOGLE_FORM,
+          externalUrl: null,
+        }).success
+      ).toBe(false);
+
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.EXTERNAL,
+          registrationMethod: RegistrationMethod.GOOGLE_FORM,
+        }).success
+      ).toBe(false);
+
+      // INTERNAL with URL
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.INTERNAL,
+          registrationMethod: RegistrationMethod.BUILT_IN,
+          externalUrl: "https://example.com/not-allowed",
+        }).success
+      ).toBe(false);
+
+      // NONE with URL
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.NONE,
+          registrationMethod: RegistrationMethod.NONE,
+          externalUrl: "https://example.com/not-allowed",
+          eligibilityCrescent: false,
+          eligibilityExternal: false,
+        }).success
+      ).toBe(false);
+
+      // Malformed external URL
+      expect(
+        createEventSchema.safeParse({
+          ...validBaseEvent,
+          registrationMode: RegistrationMode.EXTERNAL,
+          registrationMethod: RegistrationMethod.GOOGLE_FORM,
+          externalUrl: "not-a-valid-url",
+        }).success
+      ).toBe(false);
 
       // Non-NONE mode requires at least one eligibility flag
       const noEligibility = createEventSchema.safeParse({

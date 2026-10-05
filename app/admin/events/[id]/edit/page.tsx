@@ -66,6 +66,7 @@ export default async function AdminEditEventPage({ params }: PageProps) {
         capacity: rawEvent.capacity,
         registrationMode: rawEvent.registrationMode,
         registrationMethod: rawEvent.registrationMethod,
+        externalUrl: rawEvent.externalUrl,
         eligibilityCrescent: rawEvent.eligibilityCrescent,
         eligibilityExternal: rawEvent.eligibilityExternal,
         registrationOpensAt: rawEvent.registrationOpensAt,

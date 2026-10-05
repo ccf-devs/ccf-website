@@ -60,6 +60,7 @@ export interface EventDetailData {
   capacity: number | null;
   registrationMode: RegistrationMode;
   registrationMethod: RegistrationMethod;
+  externalUrl?: string | null;
   eligibilityCrescent: boolean;
   eligibilityExternal: boolean;
   registrationOpensAt: Date | string | null;
@@ -575,7 +576,7 @@ export function EventDetailView({ event, media = [] }: EventDetailViewProps) {
               </span>
             </div>
 
-            {event.registrationMode !== RegistrationMode.NONE && (
+            {event.registrationMode === RegistrationMode.INTERNAL && (
               <div className="flex items-center justify-between pt-1">
                 <span className="text-ccf-muted">Form Engine</span>
                 <div className="flex items-center gap-2">
@@ -589,6 +590,25 @@ export function EventDetailView({ event, media = [] }: EventDetailViewProps) {
                     Open Builder &rarr;
                   </Link>
                 </div>
+              </div>
+            )}
+
+            {event.registrationMode === RegistrationMode.EXTERNAL && (
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-ccf-muted">External URL</span>
+                {event.externalUrl ? (
+                  <a
+                    href={event.externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-ccf-gold hover:underline font-mono truncate max-w-[200px]"
+                    title={event.externalUrl}
+                  >
+                    {event.externalUrl}
+                  </a>
+                ) : (
+                  <span className="text-ccf-muted italic">Not configured</span>
+                )}
               </div>
             )}
           </CardContent>

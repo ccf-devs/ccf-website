@@ -186,4 +186,56 @@ describe("Public Registration Page Fail-Closed Production Behavior", () => {
     expect(html).toContain("CAPACITY REACHED");
     expect(html).toContain("Event at Full Capacity");
   });
+
+  it("renders external destination button with externalUrl when registrationMode is EXTERNAL", async () => {
+    const externalEvent = {
+      id: "event-uuid-3",
+      slug: "external-event",
+      name: "External Symposium",
+      status: EventStatus.PUBLISHED,
+      registrationMode: RegistrationMode.EXTERNAL,
+      registrationMethod: RegistrationMethod.GOOGLE_FORM,
+      externalUrl: "https://forms.google.com/direct-test",
+      activeFormVersion: null,
+    };
+
+    (prisma.event.findUnique as any).mockResolvedValue(externalEvent);
+
+    const pageElement = await EventRegistrationPage({
+      params: Promise.resolve({ slug: "external-event" }),
+    });
+
+    const html = renderToStaticMarkup(pageElement);
+
+    expect(html).not.toContain("<form");
+    expect(html).toContain("EXTERNAL REGISTRATION");
+    expect(html).toContain("External Registration Required");
+    expect(html).toContain('href="https://forms.google.com/direct-test"');
+    expect(html).toContain("Go to External Form");
+    expect(html).toContain('target="_blank"');
+  });
+
+  it("renders safe non-internal notice when registrationMode is NONE", async () => {
+    const noneEvent = {
+      id: "event-uuid-4",
+      slug: "no-reg-event",
+      name: "Open Event",
+      status: EventStatus.PUBLISHED,
+      registrationMode: RegistrationMode.NONE,
+      registrationMethod: RegistrationMethod.NONE,
+      externalUrl: null,
+      activeFormVersion: null,
+    };
+
+    (prisma.event.findUnique as any).mockResolvedValue(noneEvent);
+
+    const pageElement = await EventRegistrationPage({
+      params: Promise.resolve({ slug: "no-reg-event" }),
+    });
+
+    const html = renderToStaticMarkup(pageElement);
+
+    expect(html).not.toContain("<form");
+    expect(html).toContain("Registration Not Handled Here");
+  });
 });

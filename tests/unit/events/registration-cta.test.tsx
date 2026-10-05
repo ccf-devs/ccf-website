@@ -2,7 +2,7 @@ import React from "react";
 import { describe, it, expect } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { EventRegistrationCta } from "@/components/events/event-registration-cta";
-import { type CcfEvent } from "@/lib/data/events";
+import { type CcfEvent, toPublicEventSummary } from "@/lib/data/events";
 
 describe("EventRegistrationCta Component Unit Tests", () => {
   const baseEvent: CcfEvent = {
@@ -92,11 +92,12 @@ describe("EventRegistrationCta Component Unit Tests", () => {
   });
 
   describe("Case D — EXTERNAL REGISTRATION", () => {
-    it("renders 'Registration' with explanatory text and safe external link", () => {
+    it("renders external 'Register Now' link for EXTERNAL + GOOGLE_FORM", () => {
       const event: CcfEvent = {
         ...baseEvent,
         registrationMode: "EXTERNAL",
-        externalRegistrationUrl: "https://forms.crescent.education/event-2026",
+        registrationMethod: "GOOGLE_FORM",
+        externalUrl: "https://forms.google.com/event-2026",
       };
 
       const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
@@ -104,9 +105,51 @@ describe("EventRegistrationCta Component Unit Tests", () => {
       expect(html).toContain(
         "Registration is handled through the official registration link."
       );
-      expect(html).toContain('href="https://forms.crescent.education/event-2026"');
+      expect(html).toContain('href="https://forms.google.com/event-2026"');
       expect(html).toContain('target="_blank"');
       expect(html).toContain('rel="noopener noreferrer"');
+    });
+
+    it("renders external 'Register Now' link for EXTERNAL + EXTERNAL_LINK", () => {
+      const event: CcfEvent = {
+        ...baseEvent,
+        registrationMode: "EXTERNAL",
+        registrationMethod: "EXTERNAL_LINK",
+        externalUrl: "https://external-platform.com/event-2026",
+      };
+
+      const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+      expect(html).toContain("Registration");
+      expect(html).toContain('href="https://external-platform.com/event-2026"');
+      expect(html).toContain('target="_blank"');
+      expect(html).toContain('rel="noopener noreferrer"');
+    });
+
+    it("regression: proves that rich-text URLs are NOT used as registration destinations", () => {
+      // Simulate DB event with URL in instructionsRich/notesRich but externalUrl = null
+      const dbEventWithRichTextUrl = {
+        id: "evt-db-1",
+        slug: "rich-text-event",
+        name: "Rich Text Event",
+        status: "DRAFT",
+        startsAt: "2026-10-15T09:00:00.000Z",
+        registrationMode: "EXTERNAL",
+        registrationMethod: "EXTERNAL_LINK",
+        externalUrl: null,
+        content: {
+          instructionsRich: "Register at https://rogue-url-in-instructions.com now!",
+          notesRich: "Backup link: https://rogue-url-in-notes.com",
+        },
+      };
+
+      const publicSummary = toPublicEventSummary(dbEventWithRichTextUrl);
+      expect(publicSummary.externalUrl).toBeNull();
+      expect(publicSummary.externalRegistrationUrl).toBeNull();
+
+      const html = renderToStaticMarkup(<EventRegistrationCta event={publicSummary} />);
+      expect(html).not.toContain("https://rogue-url-in-instructions.com");
+      expect(html).not.toContain("https://rogue-url-in-notes.com");
+      expect(html).not.toContain("Register Now");
     });
   });
 

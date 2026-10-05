@@ -99,6 +99,7 @@ export default async function EventRegistrationPage({ params }: PageProps) {
           reason="EXTERNAL_MODE"
           eventName={event.name}
           eventSlug={event.slug}
+          externalUrl={event.externalUrl}
         />
       </Container>
     );

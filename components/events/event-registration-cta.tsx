@@ -16,8 +16,14 @@ export function EventRegistrationCta({ event }: EventRegistrationCtaProps) {
   const closesAt = event.registrationClosesAt ? new Date(event.registrationClosesAt) : null;
 
   // Determine which registration case applies
-  const isExternal = event.registrationMode === "EXTERNAL";
-  const isInternal = event.registrationMode === "INTERNAL";
+  const isInternal =
+    event.registrationMode === "INTERNAL" &&
+    event.registrationMethod === "BUILT_IN";
+  const isExternal =
+    event.registrationMode === "EXTERNAL" &&
+    (event.registrationMethod === "GOOGLE_FORM" ||
+      event.registrationMethod === "EXTERNAL_LINK" ||
+      !event.registrationMethod);
 
   // Check timing for internal registrations
   const isClosed = isInternal && (
@@ -151,7 +157,7 @@ export function EventRegistrationCta({ event }: EventRegistrationCtaProps) {
 
   // CASE D: EXTERNAL REGISTRATION
   if (isExternal) {
-    const externalUrl = event.externalRegistrationUrl || "";
+    const externalUrl = event.externalUrl || event.externalRegistrationUrl || "";
     return (
       <section aria-label="Event Registration" className="py-6 md:py-8 border-b border-border/30">
         <FadeIn>

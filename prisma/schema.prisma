@@ -46,6 +46,7 @@ enum RegistrationMode {
 enum RegistrationMethod {
   BUILT_IN
   GOOGLE_FORM
+  EXTERNAL_LINK
   NONE
 }
 
@@ -229,6 +230,7 @@ model Event {
 
   registrationMethod RegistrationMethod @default(NONE) @map("registration_method")
   registrationMode   RegistrationMode   @default(NONE) @map("registration_mode")
+  externalUrl        String?            @map("external_url") @db.VarChar(500)
 
   eligibilityCrescent Boolean @default(false) @map("eligibility_crescent")
   eligibilityExternal Boolean @default(false) @map("eligibility_external")

@@ -105,6 +105,14 @@ export const eventBaseFields = {
 
   registrationMethod: z.nativeEnum(RegistrationMethod).default(RegistrationMethod.NONE),
 
+  externalUrl: z
+    .string()
+    .trim()
+    .max(500, "External registration URL cannot exceed 500 characters")
+    .nullable()
+    .optional()
+    .transform((val) => (val === "" ? null : val)),
+
   eligibilityCrescent: z.boolean().default(false),
 
   eligibilityExternal: z.boolean().default(false),
@@ -147,6 +155,15 @@ export const eventBaseFields = {
   eligibilityRich: z.string().trim().nullable().optional(),
   notesRich: z.string().trim().nullable().optional(),
 };
+
+function isValidHttpUrl(stringUrl: string): boolean {
+  try {
+    const url = new URL(stringUrl);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Cross-field consistency validation for complete event configurations.
@@ -199,18 +216,52 @@ export function applyCrossFieldEventRules<T extends z.ZodTypeAny>(schema: T) {
         path: ["capacity"],
       }
     )
-    // 4. Registration consistency (Correction 3: separate concepts, no forced internal/external mapping)
+    // 4. Registration mode and method consistency
     .refine(
       (data) => {
         if (data.registrationMode === RegistrationMode.NONE) {
           return data.registrationMethod === RegistrationMethod.NONE;
         }
-        return data.registrationMethod !== RegistrationMethod.NONE;
+        if (data.registrationMode === RegistrationMode.INTERNAL) {
+          return data.registrationMethod === RegistrationMethod.BUILT_IN;
+        }
+        if (data.registrationMode === RegistrationMode.EXTERNAL) {
+          return (
+            data.registrationMethod === RegistrationMethod.GOOGLE_FORM ||
+            data.registrationMethod === RegistrationMethod.EXTERNAL_LINK
+          );
+        }
+        return false;
       },
       {
         message:
-          "Events with registration must specify a registration method; events with NONE mode must use NONE method",
+          "Invalid registration configuration: NONE requires NONE method; INTERNAL requires BUILT_IN method; EXTERNAL requires GOOGLE_FORM or EXTERNAL_LINK method",
         path: ["registrationMethod"],
+      }
+    )
+    // 4.5. External registration URL consistency
+    .refine(
+      (data) => {
+        if (data.registrationMode === RegistrationMode.EXTERNAL) {
+          if (
+            !data.externalUrl ||
+            typeof data.externalUrl !== "string" ||
+            data.externalUrl.trim().length === 0
+          ) {
+            return false;
+          }
+          return isValidHttpUrl(data.externalUrl.trim());
+        }
+        return (
+          data.externalUrl === null ||
+          data.externalUrl === undefined ||
+          (typeof data.externalUrl === "string" && data.externalUrl.trim().length === 0)
+        );
+      },
+      {
+        message:
+          "External registration URL is required and must be a valid HTTP or HTTPS URL when mode is EXTERNAL; external URL must not be provided when mode is INTERNAL or NONE",
+        path: ["externalUrl"],
       }
     )
     // 5. Eligibility consistency when registration is enabled
@@ -410,6 +461,7 @@ export const updateEventPatchSchema = z.object({
   capacity: eventBaseFields.capacity,
   registrationMode: z.nativeEnum(RegistrationMode).optional(),
   registrationMethod: z.nativeEnum(RegistrationMethod).optional(),
+  externalUrl: eventBaseFields.externalUrl,
   eligibilityCrescent: z.boolean().optional(),
   eligibilityExternal: z.boolean().optional(),
   registrationOpensAt: nullableDateCoerceSchema.optional(),
