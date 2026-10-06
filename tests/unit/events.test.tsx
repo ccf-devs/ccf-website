@@ -152,13 +152,23 @@ describe("Events Page Comprehensive Verification (Phase 5 Task 5)", () => {
     });
 
     it("renders EventsOverview with factual summaries without fake statistics or unsupported outcome claims", () => {
-      const html = renderToStaticMarkup(<EventsOverview />);
+      const html = renderToStaticMarkup(<EventsOverview upcomingCount={1} pastCount={2} />);
       expect(html).toContain("1 Upcoming Event");
       expect(html).toContain("2 Concluded Events");
       expect(html).toContain("Campus Location");
-      expect(html).toContain("Magnora’26");
-      expect(html).toContain("FinRise’25 and FinVibe Fiesta Season 02 are past CCF events.");
+      expect(html).not.toContain("Magnora’26");
+      expect(html).not.toContain("FinRise’25");
+      expect(html).not.toContain("FinVibe");
+      expect(html).toContain("Upcoming finance symposiums, workshops, and competitions at Crescent Campus.");
+      expect(html).toContain("Past symposiums, competitions, and educational activities organized by CCF.");
       expect(html).not.toContain("successfully");
+    });
+
+    it("renders EventsOverview with plural or zero counts dynamically", () => {
+      const html = renderToStaticMarkup(<EventsOverview upcomingCount={2} pastCount={0} />);
+      expect(html).toContain("2 Upcoming Events");
+      expect(html).toContain("0 Concluded Events");
+      expect(html).toContain("No past events recorded in the archive.");
     });
 
     it("renders EventCard with event name, date, venue, description, status, and navigation action", () => {

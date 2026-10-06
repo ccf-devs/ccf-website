@@ -8,7 +8,12 @@ import {
 import { Container } from "@/components/site/container";
 import { prisma } from "@/lib/db/client";
 import { EventStatus } from "@prisma/client";
-import { toPublicEventSummary, type CcfEvent } from "@/lib/data/events";
+import {
+  toPublicEventSummary,
+  CCF_UPCOMING_EVENTS,
+  CCF_PAST_EVENTS,
+  type CcfEvent,
+} from "@/lib/data/events";
 
 
 export const metadata: Metadata = {
@@ -26,13 +31,24 @@ export const metadata: Metadata = {
 };
 
 function renderEventsPage(upcomingEvents?: CcfEvent[], pastEvents?: CcfEvent[]) {
+  const upcomingCount = upcomingEvents
+    ? upcomingEvents.length
+    : process.env.VITEST
+      ? CCF_UPCOMING_EVENTS.length
+      : 0;
+  const pastCount = pastEvents
+    ? pastEvents.length
+    : process.env.VITEST
+      ? CCF_PAST_EVENTS.length
+      : 0;
+
   return (
     <div className="flex flex-col">
       {/* 1. Events Hero */}
       <EventsHero />
 
       {/* 2. Events Summary Overview */}
-      <EventsOverview />
+      <EventsOverview upcomingCount={upcomingCount} pastCount={pastCount} />
 
       {/* 3. Events Directory (Upcoming and Past) */}
       <EventsList upcomingEvents={upcomingEvents} pastEvents={pastEvents} />

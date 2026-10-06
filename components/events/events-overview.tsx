@@ -1,22 +1,34 @@
 import React from "react";
 import { Calendar, History, MapPin } from "lucide-react";
 import { Container } from "@/components/site/container";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FadeIn } from "@/components/motion/fade-in";
+import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { StaggerContainer, StaggerItem } from "@/components/motion/stagger";
-import { CCF_UPCOMING_EVENTS, CCF_PAST_EVENTS } from "@/lib/data/events";
 
-export function EventsOverview() {
+export interface EventsOverviewProps {
+  upcomingCount?: number;
+  pastCount?: number;
+}
+
+export function EventsOverview({
+  upcomingCount = 0,
+  pastCount = 0,
+}: EventsOverviewProps = {}) {
   const stats = [
     {
       icon: Calendar,
-      title: `${CCF_UPCOMING_EVENTS.length} Upcoming Event`,
-      description: "Magnora’26 finance and business symposium scheduled at Crescent Campus.",
+      title: `${upcomingCount} ${upcomingCount === 1 ? "Upcoming Event" : "Upcoming Events"}`,
+      description:
+        upcomingCount > 0
+          ? "Upcoming finance symposiums, workshops, and competitions at Crescent Campus."
+          : "No upcoming events currently scheduled at Crescent Campus.",
     },
     {
       icon: History,
-      title: `${CCF_PAST_EVENTS.length} Concluded Events`,
-      description: "FinRise’25 and FinVibe Fiesta Season 02 are past CCF events.",
+      title: `${pastCount} ${pastCount === 1 ? "Concluded Event" : "Concluded Events"}`,
+      description:
+        pastCount > 0
+          ? "Past symposiums, competitions, and educational activities organized by CCF."
+          : "No past events recorded in the archive.",
     },
     {
       icon: MapPin,

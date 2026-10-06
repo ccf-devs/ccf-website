@@ -1,5 +1,5 @@
 export { EventsHero } from "./events-hero";
-export { EventsOverview } from "./events-overview";
+export { EventsOverview, type EventsOverviewProps } from "./events-overview";
 export { EventsList } from "./events-list";
 export { EventCard } from "./event-card";
 export { EventsCta } from "./events-cta";
