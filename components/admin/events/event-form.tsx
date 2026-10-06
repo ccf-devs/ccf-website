@@ -482,7 +482,9 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
               required
               value={startsAt}
               min={
-                mode === "create"
+                registrationMode === RegistrationMode.NONE
+                  ? undefined
+                  : mode === "create"
                   ? nowFormatted
                   : isHistorical(initialData.startsAt)
                   ? formatDateForInput(initialData.startsAt)
@@ -505,7 +507,9 @@ export function EventForm({ mode, initialData = {}, eventId }: EventFormProps) {
               type="datetime-local"
               value={endsAt}
               min={
-                mode === "create"
+                registrationMode === RegistrationMode.NONE
+                  ? startsAt || undefined
+                  : mode === "create"
                   ? startsAt || nowFormatted
                   : isHistorical(initialData.endsAt)
                   ? formatDateForInput(initialData.endsAt)

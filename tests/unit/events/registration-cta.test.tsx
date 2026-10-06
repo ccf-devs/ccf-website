@@ -76,19 +76,6 @@ describe("EventRegistrationCta Component Unit Tests", () => {
       expect(html).not.toContain('href="/events/symposium-2026/register"');
       expect(html).not.toContain("Register Now");
     });
-
-    it("renders 'Registration Closed' when event status is PREVIOUS EVENT", () => {
-      const event: CcfEvent = {
-        ...baseEvent,
-        status: "PREVIOUS EVENT",
-        registrationMode: "INTERNAL",
-        registrationMethod: "BUILT_IN",
-      };
-
-      const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
-      expect(html).toContain("Registration Closed");
-      expect(html).not.toContain('href="/events/symposium-2026/register"');
-    });
   });
 
   describe("Case D — EXTERNAL REGISTRATION", () => {
@@ -181,6 +168,170 @@ describe("EventRegistrationCta Component Unit Tests", () => {
       const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
       expect(html).toContain("No registration is required for this event.");
       expect(html).not.toContain("Register Now");
+    });
+  });
+
+  describe("Case F — Concluded / Past Event Handling", () => {
+    const pastDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    describe("past + NONE → no registration UI", () => {
+      it("returns empty markup when event status is PREVIOUS EVENT and mode is NONE", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          status: "PREVIOUS EVENT",
+          registrationMode: "NONE",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("No registration is required");
+      });
+
+      it("returns empty markup when startsAt is in the past and mode is NONE", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          startsAt: pastDate,
+          registrationMode: "NONE",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("No registration is required");
+      });
+    });
+
+    describe("past + INTERNAL → no registration UI", () => {
+      it("returns empty markup when event status is PREVIOUS EVENT and mode is INTERNAL", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          status: "PREVIOUS EVENT",
+          registrationMode: "INTERNAL",
+          registrationMethod: "BUILT_IN",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("Registration");
+        expect(html).not.toContain("Register Now");
+      });
+
+      it("returns empty markup when startsAt is in the past and mode is INTERNAL", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          startsAt: pastDate,
+          registrationMode: "INTERNAL",
+          registrationMethod: "BUILT_IN",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("Registration");
+      });
+    });
+
+    describe("past + EXTERNAL → no registration UI", () => {
+      it("returns empty markup when event status is PREVIOUS EVENT and mode is EXTERNAL", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          status: "PREVIOUS EVENT",
+          registrationMode: "EXTERNAL",
+          registrationMethod: "GOOGLE_FORM",
+          externalUrl: "https://forms.google.com/past-event",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("Register Now");
+        expect(html).not.toContain("https://forms.google.com/past-event");
+      });
+
+      it("returns empty markup when startsAt is in the past and mode is EXTERNAL", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          startsAt: pastDate,
+          registrationMode: "EXTERNAL",
+          registrationMethod: "EXTERNAL_LINK",
+          externalUrl: "https://external.com/past-event",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("Register Now");
+      });
+    });
+
+    describe("past + unconfigured → no registration UI", () => {
+      it("returns empty markup when event status is PREVIOUS EVENT and mode is unconfigured", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          status: "PREVIOUS EVENT",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("No registration is required");
+      });
+
+      it("returns empty markup when startsAt is in the past and mode is unconfigured", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          startsAt: pastDate,
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toBe("");
+        expect(html).not.toContain("No registration is required");
+      });
+    });
+
+    describe("upcoming events → preserve existing behavior", () => {
+      it("upcoming + NONE → existing notice", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          status: "UPCOMING",
+          startsAt: futureDate,
+          registrationMode: "NONE",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toContain("No registration is required for this event.");
+        expect(html).toContain(
+          "This event is open to attendees without prior registration or credentials."
+        );
+        expect(html).not.toContain("Register Now");
+      });
+
+      it("upcoming + INTERNAL → existing registration behavior (open)", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          status: "UPCOMING",
+          startsAt: futureDate,
+          registrationMode: "INTERNAL",
+          registrationMethod: "BUILT_IN",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toContain("Registration is Open");
+        expect(html).toContain("Register Now");
+        expect(html).toContain('href="/events/symposium-2026/register"');
+      });
+
+      it("upcoming + EXTERNAL → existing registration behavior", () => {
+        const event: CcfEvent = {
+          ...baseEvent,
+          status: "UPCOMING",
+          startsAt: futureDate,
+          registrationMode: "EXTERNAL",
+          registrationMethod: "EXTERNAL_LINK",
+          externalUrl: "https://external.com/event",
+        };
+
+        const html = renderToStaticMarkup(<EventRegistrationCta event={event} />);
+        expect(html).toContain("Registration");
+        expect(html).toContain("Register Now");
+        expect(html).toContain('href="https://external.com/event"');
+      });
     });
   });
 });

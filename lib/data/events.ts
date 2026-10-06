@@ -45,6 +45,8 @@ export interface CcfEvent {
   registrationOpensAt?: string | null;
   registrationClosesAt?: string | null;
   externalRegistrationUrl?: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
   content?: {
     descriptionRich?: string | null;
     rulesRich?: string | null;
@@ -222,6 +224,12 @@ export function toPublicEventSummary(dbEvent: {
       : null,
     externalUrl: extUrl,
     externalRegistrationUrl: extUrl,
+    startsAt: dbEvent.startsAt
+      ? new Date(dbEvent.startsAt).toISOString()
+      : null,
+    endsAt: dbEvent.endsAt
+      ? new Date(dbEvent.endsAt).toISOString()
+      : null,
     content: dbEvent.content
       ? {
           descriptionRich: dbEvent.content.descriptionRich,

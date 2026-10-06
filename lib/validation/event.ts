@@ -369,10 +369,22 @@ export function validateEventDateUpdates(
   const errors: Record<string, string> = {};
   const threshold = Date.now() - 60_000;
 
+  const effectiveRegistrationMode =
+    patch.registrationMode !== undefined
+      ? patch.registrationMode
+      : existing.registrationMode;
+  const isHistoricalAllowed =
+    effectiveRegistrationMode === RegistrationMode.NONE;
+
   const checkField = (
     field: "startsAt" | "endsAt" | "registrationOpensAt" | "registrationClosesAt",
     label: string
   ) => {
+    // startsAt and endsAt are allowed to be in the past when registrationMode === NONE
+    if (isHistoricalAllowed && (field === "startsAt" || field === "endsAt")) {
+      return;
+    }
+
     if (patch[field] !== undefined && patch[field] !== null && patch[field] !== "") {
       const newDate = new Date(patch[field]);
       if (!isNaN(newDate.getTime())) {
@@ -399,6 +411,23 @@ export function validateEventDateUpdates(
   checkField("registrationOpensAt", "Registration opening date");
   checkField("registrationClosesAt", "Registration closing date");
 
+  // If registration is being newly switched from NONE to enabled on an event whose startsAt is in the past, reject
+  if (
+    !isHistoricalAllowed &&
+    existing.registrationMode === RegistrationMode.NONE &&
+    patch.registrationMode !== undefined &&
+    patch.registrationMode !== RegistrationMode.NONE
+  ) {
+    const startsAtVal =
+      patch.startsAt !== undefined ? patch.startsAt : existing.startsAt;
+    if (startsAtVal) {
+      const sTime = new Date(startsAtVal).getTime();
+      if (!isNaN(sTime) && sTime < threshold) {
+        errors.startsAt = "Event start date cannot be in the past when registration is enabled";
+      }
+    }
+  }
+
   return {
     valid: Object.keys(errors).length === 0,
     errors,
@@ -407,18 +436,24 @@ export function validateEventDateUpdates(
 
 /**
  * Schema for creating a new event.
- * Enforces that all four date/time fields cannot be in the past.
+ * Enforces that date/time fields cannot be in the past, unless registrationMode === NONE (historical event).
  */
 export const createEventSchema = completeEventSchema
   .refine(
-    (data) => !data.startsAt || data.startsAt.getTime() >= Date.now() - 60_000,
+    (data) =>
+      data.registrationMode === RegistrationMode.NONE ||
+      !data.startsAt ||
+      data.startsAt.getTime() >= Date.now() - 60_000,
     {
       message: "Event start date cannot be in the past",
       path: ["startsAt"],
     }
   )
   .refine(
-    (data) => !data.endsAt || data.endsAt.getTime() >= Date.now() - 60_000,
+    (data) =>
+      data.registrationMode === RegistrationMode.NONE ||
+      !data.endsAt ||
+      data.endsAt.getTime() >= Date.now() - 60_000,
     {
       message: "Event end date cannot be in the past",
       path: ["endsAt"],

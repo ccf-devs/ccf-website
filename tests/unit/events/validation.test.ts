@@ -18,12 +18,13 @@ import {
 } from "@prisma/client";
 
 describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
+  const oneDayMs = 86_400_000;
   const validBaseEvent = {
     name: "Magnora’26 Finance Symposium",
     slug: "magnora-26",
     status: EventStatus.DRAFT,
-    startsAt: "2026-10-15T09:00:00.000Z",
-    endsAt: "2026-10-15T17:00:00.000Z",
+    startsAt: new Date(Date.now() + 30 * oneDayMs).toISOString(),
+    endsAt: new Date(Date.now() + 31 * oneDayMs).toISOString(),
     venue: "Crescent Auditorium, Vandalur",
     capacityMode: EventCapacityMode.PARTICIPANTS,
     capacity: 250,
@@ -31,8 +32,8 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
     registrationMethod: RegistrationMethod.BUILT_IN,
     eligibilityCrescent: true,
     eligibilityExternal: true,
-    registrationOpensAt: "2026-10-06T00:00:00.000Z",
-    registrationClosesAt: "2026-10-10T23:59:59.000Z",
+    registrationOpensAt: new Date(Date.now() + 10 * oneDayMs).toISOString(),
+    registrationClosesAt: new Date(Date.now() + 20 * oneDayMs).toISOString(),
     paymentMode: PaymentMode.FREE,
     descriptionRich: "Symposium on algorithmic finance and quantitative trading.",
     rulesRich: "Must present valid student ID.",
@@ -81,8 +82,8 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
     it("enforces date consistency: endsAt must be after startsAt", () => {
       const result = createEventSchema.safeParse({
         ...validBaseEvent,
-        startsAt: "2026-10-15T18:00:00.000Z",
-        endsAt: "2026-10-15T09:00:00.000Z", // Earlier than start!
+        startsAt: new Date(Date.now() + 35 * oneDayMs).toISOString(),
+        endsAt: new Date(Date.now() + 30 * oneDayMs).toISOString(), // Earlier than start!
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -95,8 +96,8 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
     it("enforces registration window consistency: closesAt must be after opensAt", () => {
       const result = createEventSchema.safeParse({
         ...validBaseEvent,
-        registrationOpensAt: "2026-10-10T00:00:00.000Z",
-        registrationClosesAt: "2026-10-05T00:00:00.000Z", // Earlier than opens!
+        registrationOpensAt: new Date(Date.now() + 20 * oneDayMs).toISOString(),
+        registrationClosesAt: new Date(Date.now() + 10 * oneDayMs).toISOString(), // Earlier than opens!
       });
       expect(result.success).toBe(false);
       if (!result.success) {
@@ -403,8 +404,8 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
         name: "Existing Event",
         slug: "existing-event",
         status: EventStatus.DRAFT,
-        startsAt: new Date("2026-10-15T09:00:00.000Z"),
-        endsAt: new Date("2026-10-15T17:00:00.000Z"),
+        startsAt: new Date(Date.now() + 30 * oneDayMs),
+        endsAt: new Date(Date.now() + 31 * oneDayMs),
         capacityMode: EventCapacityMode.UNLIMITED,
         capacity: null,
         registrationMode: RegistrationMode.NONE,
@@ -439,8 +440,8 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
         name: "Existing Event",
         slug: "existing-event",
         status: EventStatus.DRAFT,
-        startsAt: new Date("2026-10-15T09:00:00.000Z"),
-        endsAt: new Date("2026-10-15T17:00:00.000Z"),
+        startsAt: new Date(Date.now() + 30 * oneDayMs),
+        endsAt: new Date(Date.now() + 31 * oneDayMs),
         capacityMode: EventCapacityMode.UNLIMITED,
         registrationMode: RegistrationMode.NONE,
         registrationMethod: RegistrationMethod.NONE,
@@ -449,7 +450,7 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
 
       // Patch sets startsAt AFTER existing endsAt!
       const patch = {
-        startsAt: "2026-10-15T20:00:00.000Z",
+        startsAt: new Date(Date.now() + 35 * oneDayMs).toISOString(),
       };
 
       const merged = mergeEventWithPatch(existing, patch);
@@ -610,6 +611,145 @@ describe("Event Validation & Lifecycle Specification (Phase 6)", () => {
 
       const dateCheck = validateEventDateUpdates(existing, patch);
       expect(dateCheck.valid).toBe(true);
+    });
+  });
+
+  describe("E. Historical Event Creation & Date Lifecycle", () => {
+    const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
+    const oneWeekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const twoWeeksAgo = new Date(Date.now() - 14 * 86400000).toISOString();
+    const futureStart = new Date(Date.now() + 30 * 86400000).toISOString();
+    const futureEnd = new Date(Date.now() + 31 * 86400000).toISOString();
+
+    it("accepts creating a historical event when registrationMode is NONE and dates are in the past", () => {
+      const historicalEvent = {
+        ...validBaseEvent,
+        registrationMode: RegistrationMode.NONE,
+        registrationMethod: RegistrationMethod.NONE,
+        eligibilityCrescent: false,
+        eligibilityExternal: false,
+        registrationOpensAt: null,
+        registrationClosesAt: null,
+        startsAt: oneWeekAgo,
+        endsAt: oneDayAgo,
+      };
+      const result = createEventSchema.safeParse(historicalEvent);
+      expect(result.success).toBe(true);
+    });
+
+    it("accepts creating a future event when registrationMode is NONE and dates are in the future", () => {
+      const futureNoRegEvent = {
+        ...validBaseEvent,
+        registrationMode: RegistrationMode.NONE,
+        registrationMethod: RegistrationMethod.NONE,
+        eligibilityCrescent: false,
+        eligibilityExternal: false,
+        registrationOpensAt: null,
+        registrationClosesAt: null,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+      };
+      const result = createEventSchema.safeParse(futureNoRegEvent);
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects creating a historical event when registrationMode is INTERNAL", () => {
+      const invalidInternal = {
+        ...validBaseEvent,
+        registrationMode: RegistrationMode.INTERNAL,
+        registrationMethod: RegistrationMethod.BUILT_IN,
+        startsAt: oneWeekAgo,
+        endsAt: oneDayAgo,
+      };
+      const result = createEventSchema.safeParse(invalidInternal);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes("startsAt"))).toBe(true);
+      }
+    });
+
+    it("rejects creating a historical event when registrationMode is EXTERNAL", () => {
+      const invalidExternal = {
+        ...validBaseEvent,
+        registrationMode: RegistrationMode.EXTERNAL,
+        registrationMethod: RegistrationMethod.GOOGLE_FORM,
+        externalUrl: "https://forms.google.com/test",
+        startsAt: oneWeekAgo,
+        endsAt: oneDayAgo,
+      };
+      const result = createEventSchema.safeParse(invalidExternal);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues.some((i) => i.path.includes("startsAt"))).toBe(true);
+      }
+    });
+
+    it("rejects registration dates in the past even if startsAt/endsAt are historical and registrationMode is NONE", () => {
+      const invalidRegDates = {
+        ...validBaseEvent,
+        registrationMode: RegistrationMode.NONE,
+        registrationMethod: RegistrationMethod.NONE,
+        eligibilityCrescent: false,
+        eligibilityExternal: false,
+        startsAt: oneWeekAgo,
+        endsAt: oneDayAgo,
+        registrationOpensAt: twoWeeksAgo,
+        registrationClosesAt: oneWeekAgo,
+      };
+      const result = createEventSchema.safeParse(invalidRegDates);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(
+          result.error.issues.some(
+            (i) => i.path.includes("registrationOpensAt") || i.path.includes("registrationClosesAt")
+          )
+        ).toBe(true);
+      }
+    });
+
+    it("permits editing an existing event with registrationMode=NONE to historical dates", () => {
+      const existingNoReg = {
+        id: "evt-uuid-3",
+        registrationMode: RegistrationMode.NONE,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+      };
+      const patch = {
+        startsAt: twoWeeksAgo,
+        endsAt: oneWeekAgo,
+      };
+      const check = validateEventDateUpdates(existingNoReg, patch);
+      expect(check.valid).toBe(true);
+    });
+
+    it("rejects editing a registration-enabled event to historical dates", () => {
+      const existingInternal = {
+        id: "evt-uuid-4",
+        registrationMode: RegistrationMode.INTERNAL,
+        startsAt: futureStart,
+        endsAt: futureEnd,
+      };
+      const patch = {
+        startsAt: twoWeeksAgo,
+      };
+      const check = validateEventDateUpdates(existingInternal, patch);
+      expect(check.valid).toBe(false);
+      expect(check.errors.startsAt).toContain("cannot be set to a past date");
+    });
+
+    it("rejects switching registration mode from NONE to INTERNAL on an event with historical startsAt", () => {
+      const existingHistorical = {
+        id: "evt-uuid-5",
+        registrationMode: RegistrationMode.NONE,
+        startsAt: twoWeeksAgo,
+        endsAt: oneWeekAgo,
+      };
+      const patch = {
+        registrationMode: RegistrationMode.INTERNAL,
+      };
+      const check = validateEventDateUpdates(existingHistorical, patch);
+      expect(check.valid).toBe(false);
+      expect(check.errors.startsAt).toContain("cannot be in the past when registration is enabled");
     });
   });
 });

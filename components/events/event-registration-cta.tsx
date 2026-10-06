@@ -12,8 +12,17 @@ interface EventRegistrationCtaProps {
 
 export function EventRegistrationCta({ event }: EventRegistrationCtaProps) {
   const now = new Date();
+  const startsAt = event.startsAt ? new Date(event.startsAt) : null;
   const opensAt = event.registrationOpensAt ? new Date(event.registrationOpensAt) : null;
   const closesAt = event.registrationClosesAt ? new Date(event.registrationClosesAt) : null;
+
+  const isPast =
+    event.status === "PREVIOUS EVENT" ||
+    (startsAt !== null && !isNaN(startsAt.getTime()) && startsAt < now);
+
+  if (isPast) {
+    return null;
+  }
 
   // Determine which registration case applies
   const isInternal =
@@ -26,10 +35,7 @@ export function EventRegistrationCta({ event }: EventRegistrationCtaProps) {
       !event.registrationMethod);
 
   // Check timing for internal registrations
-  const isClosed = isInternal && (
-    (closesAt !== null && now > closesAt) ||
-    event.status === "PREVIOUS EVENT"
-  );
+  const isClosed = isInternal && (closesAt !== null && now > closesAt);
   const isOpensSoon = isInternal && !isClosed && (
     opensAt !== null && now < opensAt
   );
