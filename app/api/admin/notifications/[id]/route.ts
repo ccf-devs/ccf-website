@@ -56,6 +56,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
             email: true,
           },
         },
+        receipts: {
+          where: { adminId: admin.id },
+          select: { readAt: true },
+        },
       },
     });
 
@@ -71,9 +75,36 @@ export async function GET(req: NextRequest, context: RouteContext) {
       );
     }
 
+    const adminReceipt = notification.receipts?.[0];
+    const effectiveReadAt = adminReceipt
+      ? typeof adminReceipt.readAt === "string"
+        ? adminReceipt.readAt
+        : adminReceipt.readAt.toISOString()
+      : notification.targetAdminId === admin.id && notification.readAt
+      ? typeof notification.readAt === "string"
+        ? notification.readAt
+        : notification.readAt.toISOString()
+      : null;
+
+    const createdAtIso = notification.createdAt
+      ? typeof notification.createdAt === "string"
+        ? notification.createdAt
+        : notification.createdAt.toISOString()
+      : new Date().toISOString();
+
     return NextResponse.json({
       success: true,
-      notification,
+      notification: {
+        id: notification.id,
+        targetAdminId: notification.targetAdminId,
+        type: notification.type,
+        title: notification.title,
+        body: notification.body,
+        severity: notification.severity,
+        readAt: effectiveReadAt,
+        createdAt: createdAtIso,
+        targetAdmin: notification.targetAdmin,
+      },
     });
   } catch (error) {
     console.error(`[GET /api/admin/notifications/${id}] Error:`, error);
@@ -137,6 +168,13 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
             email: true,
           },
         },
+        receipts: {
+          where: { adminId: admin.id },
+          select: {
+            id: true,
+            readAt: true,
+          },
+        },
       },
     });
 
@@ -152,32 +190,91 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       );
     }
 
-    const isCurrentlyRead = existing.readAt !== null;
+    const existingReceipt = existing.receipts?.[0];
+    const isCurrentlyRead = Boolean(
+      existingReceipt ||
+        (existing.targetAdminId === admin.id && existing.readAt !== null)
+    );
     const shouldBeRead = validated.read;
 
     // Idempotent: if already in the desired state, return without redundant writes
     if (isCurrentlyRead === shouldBeRead) {
+      const currentReadAt = existingReceipt
+        ? typeof existingReceipt.readAt === "string"
+          ? existingReceipt.readAt
+          : existingReceipt.readAt.toISOString()
+        : existing.targetAdminId === admin.id && existing.readAt
+        ? typeof existing.readAt === "string"
+          ? existing.readAt
+          : existing.readAt.toISOString()
+        : null;
+
+      const createdAtIso = existing.createdAt
+        ? typeof existing.createdAt === "string"
+          ? existing.createdAt
+          : existing.createdAt.toISOString()
+        : new Date().toISOString();
+
       return NextResponse.json({
         success: true,
-        notification: existing,
+        notification: {
+          id: existing.id,
+          targetAdminId: existing.targetAdminId,
+          type: existing.type,
+          title: existing.title,
+          body: existing.body,
+          severity: existing.severity,
+          readAt: currentReadAt,
+          createdAt: createdAtIso,
+          targetAdmin: existing.targetAdmin,
+        },
       });
     }
 
-    const updated = await prisma.notification.update({
-      where: { id },
-      data: {
-        readAt: shouldBeRead ? new Date() : null,
-      },
-      include: {
-        targetAdmin: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    let updatedReadAt: Date | null = null;
+
+    if (shouldBeRead) {
+      const now = new Date();
+      const receipt = await prisma.notificationReceipt.upsert({
+        where: {
+          notificationId_adminId: {
+            notificationId: id,
+            adminId: admin.id,
           },
         },
-      },
-    });
+        create: {
+          notificationId: id,
+          adminId: admin.id,
+          readAt: now,
+        },
+        update: {
+          readAt: now,
+        },
+      });
+      updatedReadAt = receipt.readAt;
+
+      if (existing.targetAdminId === admin.id) {
+        await prisma.notification.update({
+          where: { id },
+          data: { readAt: now },
+        });
+      }
+    } else {
+      await prisma.notificationReceipt.deleteMany({
+        where: {
+          notificationId: id,
+          adminId: admin.id,
+        },
+      });
+      updatedReadAt = null;
+
+      if (existing.targetAdminId === admin.id) {
+        await prisma.notification.update({
+          where: { id },
+          data: { readAt: null },
+        });
+      }
+    }
 
     await createAuditLog({
       actorId: admin.id,
@@ -193,9 +290,31 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       },
     });
 
+    const createdAtIso = existing.createdAt
+      ? typeof existing.createdAt === "string"
+        ? existing.createdAt
+        : existing.createdAt.toISOString()
+      : new Date().toISOString();
+
+    const readAtIso = updatedReadAt
+      ? typeof updatedReadAt === "string"
+        ? updatedReadAt
+        : updatedReadAt.toISOString()
+      : null;
+
     return NextResponse.json({
       success: true,
-      notification: updated,
+      notification: {
+        id: existing.id,
+        targetAdminId: existing.targetAdminId,
+        type: existing.type,
+        title: existing.title,
+        body: existing.body,
+        severity: existing.severity,
+        readAt: readAtIso,
+        createdAt: createdAtIso,
+        targetAdmin: existing.targetAdmin,
+      },
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -266,6 +385,17 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
       return NextResponse.json(
         { error: "Notification not found." },
         { status: 404 }
+      );
+    }
+
+    // Shared global notifications can strictly only be permanently deleted by CCF_ADMIN
+    if (existing.targetAdminId === null && admin.role !== AdminRole.CCF_ADMIN) {
+      return NextResponse.json(
+        {
+          error:
+            "Insufficient permissions. Only CCF_ADMIN can delete global notifications.",
+        },
+        { status: 403 }
       );
     }
 

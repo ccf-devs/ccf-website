@@ -60,6 +60,12 @@ export default async function AdminNotificationsPage() {
               email: true,
             },
           },
+          receipts: {
+            where: { adminId: admin.id },
+            select: {
+              readAt: true,
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -75,17 +81,26 @@ export default async function AdminNotificationsPage() {
       }),
     ]);
 
-    notifications = rawNotifications.map((n) => ({
-      id: n.id,
-      targetAdminId: n.targetAdminId,
-      type: n.type,
-      title: n.title,
-      body: n.body,
-      severity: n.severity,
-      readAt: n.readAt ? n.readAt.toISOString() : null,
-      createdAt: n.createdAt.toISOString(),
-      targetAdmin: n.targetAdmin,
-    }));
+    notifications = rawNotifications.map((n) => {
+      const adminReceipt = n.receipts?.[0];
+      const effectiveReadAt = adminReceipt
+        ? adminReceipt.readAt.toISOString()
+        : n.targetAdminId === admin.id && n.readAt
+        ? n.readAt.toISOString()
+        : null;
+
+      return {
+        id: n.id,
+        targetAdminId: n.targetAdminId,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        severity: n.severity,
+        readAt: effectiveReadAt,
+        createdAt: n.createdAt.toISOString(),
+        targetAdmin: n.targetAdmin,
+      };
+    });
 
     activeAdmins = rawAdmins;
 
@@ -130,6 +145,7 @@ export default async function AdminNotificationsPage() {
           activeAdmins={activeAdmins}
           initialMetrics={metrics}
           currentAdminId={admin.id}
+          currentAdminRole={admin.role}
         />
       )}
     </AdminShell>

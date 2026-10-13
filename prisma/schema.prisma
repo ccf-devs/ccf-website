@@ -157,6 +157,8 @@ model AdminUser {
   auditLogs     AuditLog[]     @relation("AuditLogActor")
   siteSettings  SiteSetting[]  @relation("SiteSettingUpdatedBy")
 
+  notificationReceipts NotificationReceipt[] @relation("AdminNotificationReceipts")
+
   // Auth infrastructure back-relations
   totpSecret    AdminTotpSecret?
   recoveryCodes AdminRecoveryCode[]
@@ -546,10 +548,29 @@ model Notification {
   readAt        DateTime?            @map("read_at") @db.Timestamptz()
   createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz()
 
-  targetAdmin AdminUser? @relation("NotificationTarget", fields: [targetAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  targetAdmin AdminUser?            @relation("NotificationTarget", fields: [targetAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  receipts    NotificationReceipt[] @relation("NotificationReceipts")
 
   @@index([targetAdminId, readAt], map: "idx_notifications_admin_read")
   @@map("notifications")
+}
+
+// --- 16b. notification_receipts ----------------------------------------------
+// Tracks per-administrator read state for notifications, guaranteeing
+// that marking a global broadcast as read does not alter read state for peers.
+
+model NotificationReceipt {
+  id             String   @id @default(uuid()) @db.Uuid
+  notificationId String   @map("notification_id") @db.Uuid
+  adminId        String   @map("admin_id") @db.Uuid
+  readAt         DateTime @default(now()) @map("read_at") @db.Timestamptz()
+
+  notification   Notification @relation("NotificationReceipts", fields: [notificationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  admin          AdminUser    @relation("AdminNotificationReceipts", fields: [adminId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([notificationId, adminId], map: "uq_notification_receipt")
+  @@index([adminId, readAt], map: "idx_notification_receipts_admin_read")
+  @@map("notification_receipts")
 }
 
 // --- 17. audit_logs ----------------------------------------------------------

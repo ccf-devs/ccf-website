@@ -10,6 +10,8 @@ import {
   NotificationMetrics,
   isNotificationVisibleToAdmin,
   resolveCreatedNotificationList,
+  resolveCategoryDefault,
+  isAuthorizedToDeleteNotification,
 } from "@/components/admin/notifications";
 import * as authSession from "@/lib/auth/session";
 import { prisma } from "@/lib/db/client";
@@ -471,6 +473,130 @@ describe("Admin Notifications UI Unit Tests", () => {
       expect(html).toContain("Global");
       expect(html).toContain("Success");
       expect(html).toContain("ANNOUNCEMENT");
+    });
+  });
+
+  /* -------------------------------------------------------------------------- */
+  /* 4. Category vs Destination Dynamic Helpers                                 */
+  /* -------------------------------------------------------------------------- */
+  describe("4. Category vs Destination Dynamic Helpers", () => {
+    it("defaults to BROADCAST when switching to GLOBAL mode without manual edits", () => {
+      expect(resolveCategoryDefault("GLOBAL", "DIRECT", false)).toBe("BROADCAST");
+    });
+
+    it("defaults to DIRECT when switching to TARGETED mode without manual edits", () => {
+      expect(resolveCategoryDefault("TARGETED", "BROADCAST", false)).toBe("DIRECT");
+    });
+
+    it("preserves manual custom category when switching between modes", () => {
+      expect(resolveCategoryDefault("GLOBAL", "PAYMENT_ALERT", true)).toBe("PAYMENT_ALERT");
+      expect(resolveCategoryDefault("TARGETED", "PAYMENT_ALERT", true)).toBe("PAYMENT_ALERT");
+    });
+  });
+
+  /* -------------------------------------------------------------------------- */
+  /* 5. Role-Based Deletion Authorization Helpers & UI Rendering                */
+  /* -------------------------------------------------------------------------- */
+  describe("5. Role-Based Deletion Authorization Helpers & UI Rendering", () => {
+    const currentAdminId = "admin-uuid-1";
+    const otherAdminId = "admin-uuid-2";
+
+    it("authorizes CCF_ADMIN to delete global notifications", () => {
+      expect(isAuthorizedToDeleteNotification(null, currentAdminId, AdminRole.CCF_ADMIN)).toBe(true);
+      expect(isAuthorizedToDeleteNotification(null, currentAdminId, "CCF_ADMIN")).toBe(true);
+    });
+
+    it("denies IT_ADMIN from deleting global notifications", () => {
+      expect(isAuthorizedToDeleteNotification(null, currentAdminId, AdminRole.IT_ADMIN)).toBe(false);
+      expect(isAuthorizedToDeleteNotification(null, currentAdminId, "IT_ADMIN")).toBe(false);
+    });
+
+    it("authorizes any admin to delete their own targeted notification", () => {
+      expect(isAuthorizedToDeleteNotification(currentAdminId, currentAdminId, AdminRole.IT_ADMIN)).toBe(true);
+      expect(isAuthorizedToDeleteNotification(currentAdminId, currentAdminId, AdminRole.CCF_ADMIN)).toBe(true);
+    });
+
+    it("denies any admin from deleting another admin's targeted notification", () => {
+      expect(isAuthorizedToDeleteNotification(otherAdminId, currentAdminId, AdminRole.CCF_ADMIN)).toBe(false);
+      expect(isAuthorizedToDeleteNotification(otherAdminId, currentAdminId, AdminRole.IT_ADMIN)).toBe(false);
+    });
+
+    it("renders delete button for global notification when viewer is CCF_ADMIN", () => {
+      const globalNotif: NotificationItem = {
+        id: "global-del-1",
+        targetAdminId: null,
+        type: "BROADCAST",
+        title: "Global System Notice",
+        body: "Notice for all.",
+        severity: "INFO",
+        readAt: null,
+        createdAt: "2026-09-10T10:00:00.000Z",
+      };
+
+      const html = renderToStaticMarkup(
+        <NotificationManagementConsole
+          initialNotifications={[globalNotif]}
+          activeAdmins={sampleAdmins}
+          initialMetrics={{ total: 1, unread: 1, warningsAndErrors: 0, global: 1 }}
+          currentAdminId={currentAdminId}
+          currentAdminRole={AdminRole.CCF_ADMIN}
+        />
+      );
+
+      expect(html).toContain("Global System Notice");
+      expect(html).toContain('title="Delete notification"');
+    });
+
+    it("does NOT render delete button for global notification when viewer is IT_ADMIN", () => {
+      const globalNotif: NotificationItem = {
+        id: "global-del-1",
+        targetAdminId: null,
+        type: "BROADCAST",
+        title: "Global System Notice",
+        body: "Notice for all.",
+        severity: "INFO",
+        readAt: null,
+        createdAt: "2026-09-10T10:00:00.000Z",
+      };
+
+      const html = renderToStaticMarkup(
+        <NotificationManagementConsole
+          initialNotifications={[globalNotif]}
+          activeAdmins={sampleAdmins}
+          initialMetrics={{ total: 1, unread: 1, warningsAndErrors: 0, global: 1 }}
+          currentAdminId={currentAdminId}
+          currentAdminRole={AdminRole.IT_ADMIN}
+        />
+      );
+
+      expect(html).toContain("Global System Notice");
+      expect(html).not.toContain('title="Delete notification"');
+    });
+
+    it("renders delete button for own targeted notification when viewer is IT_ADMIN", () => {
+      const targetedNotif: NotificationItem = {
+        id: "targeted-del-1",
+        targetAdminId: currentAdminId,
+        type: "DIRECT",
+        title: "Direct Alert to IT",
+        body: "Check system health.",
+        severity: "WARNING",
+        readAt: null,
+        createdAt: "2026-09-10T10:00:00.000Z",
+      };
+
+      const html = renderToStaticMarkup(
+        <NotificationManagementConsole
+          initialNotifications={[targetedNotif]}
+          activeAdmins={sampleAdmins}
+          initialMetrics={{ total: 1, unread: 1, warningsAndErrors: 1, global: 0 }}
+          currentAdminId={currentAdminId}
+          currentAdminRole={AdminRole.IT_ADMIN}
+        />
+      );
+
+      expect(html).toContain("Direct Alert to IT");
+      expect(html).toContain('title="Delete notification"');
     });
   });
 });

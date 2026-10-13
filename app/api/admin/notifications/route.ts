@@ -65,9 +65,20 @@ export async function GET(req: NextRequest) {
   }
 
   if (status === "UNREAD") {
-    andConditions.push({ readAt: null });
+    andConditions.push({
+      receipts: { none: { adminId: admin.id } },
+      NOT: {
+        targetAdminId: admin.id,
+        NOT: { readAt: null },
+      },
+    });
   } else if (status === "READ") {
-    andConditions.push({ NOT: { readAt: null } });
+    andConditions.push({
+      OR: [
+        { receipts: { some: { adminId: admin.id } } },
+        { targetAdminId: admin.id, NOT: { readAt: null } },
+      ],
+    });
   }
 
   if (target === "GLOBAL") {
@@ -92,7 +103,7 @@ export async function GET(req: NextRequest) {
   };
 
   try {
-    const [notifications, total, unread, warningsAndErrors, globalCount] =
+    const [rawNotifications, total, unread, warningsAndErrors, globalCount] =
       await Promise.all([
         prisma.notification.findMany({
           where,
@@ -104,13 +115,26 @@ export async function GET(req: NextRequest) {
                 email: true,
               },
             },
+            receipts: {
+              where: { adminId: admin.id },
+              select: { readAt: true },
+            },
           },
           orderBy: { createdAt: "desc" },
         }),
         prisma.notification.count({ where: baseVisibility }),
         prisma.notification.count({
           where: {
-            AND: [baseVisibility, { readAt: null }],
+            AND: [
+              baseVisibility,
+              {
+                receipts: { none: { adminId: admin.id } },
+                NOT: {
+                  targetAdminId: admin.id,
+                  NOT: { readAt: null },
+                },
+              },
+            ],
           },
         }),
         prisma.notification.count({
@@ -132,6 +156,27 @@ export async function GET(req: NextRequest) {
           where: { targetAdminId: null },
         }),
       ]);
+
+    const notifications = rawNotifications.map((n) => {
+      const adminReceipt = n.receipts?.[0];
+      const effectiveReadAt = adminReceipt
+        ? adminReceipt.readAt.toISOString()
+        : n.targetAdminId === admin.id && n.readAt
+        ? n.readAt.toISOString()
+        : null;
+
+      return {
+        id: n.id,
+        targetAdminId: n.targetAdminId,
+        type: n.type,
+        title: n.title,
+        body: n.body,
+        severity: n.severity,
+        readAt: effectiveReadAt,
+        createdAt: n.createdAt.toISOString(),
+        targetAdmin: n.targetAdmin,
+      };
+    });
 
     return NextResponse.json({
       success: true,

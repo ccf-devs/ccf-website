@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await prisma.notification.updateMany({
+    const unreadNotifications = await prisma.notification.findMany({
       where: {
         AND: [
           {
@@ -40,30 +40,64 @@ export async function POST(req: NextRequest) {
               { targetAdminId: admin.id },
             ],
           },
-          { readAt: null },
+          {
+            receipts: { none: { adminId: admin.id } },
+          },
+          {
+            NOT: {
+              targetAdminId: admin.id,
+              NOT: { readAt: null },
+            },
+          },
         ],
       },
-      data: {
-        readAt: new Date(),
+      select: {
+        id: true,
+        targetAdminId: true,
       },
     });
 
-    if (result.count > 0) {
+    const count = unreadNotifications.length;
+
+    if (count > 0) {
+      const now = new Date();
+      await prisma.$transaction(async (tx) => {
+        await tx.notificationReceipt.createMany({
+          data: unreadNotifications.map((n) => ({
+            notificationId: n.id,
+            adminId: admin.id,
+            readAt: now,
+          })),
+          skipDuplicates: true,
+        });
+
+        const targetedIds = unreadNotifications
+          .filter((n) => n.targetAdminId === admin.id)
+          .map((n) => n.id);
+
+        if (targetedIds.length > 0) {
+          await tx.notification.updateMany({
+            where: { id: { in: targetedIds } },
+            data: { readAt: now },
+          });
+        }
+      });
+
       await createAuditLog({
         actorId: admin.id,
         action: NOTIFICATION_AUDIT_ACTIONS.MARK_ALL_READ,
         entityType: "Notification",
         entityId: null,
         metadata: {
-          count: result.count,
+          count,
         },
       });
     }
 
     return NextResponse.json({
       success: true,
-      count: result.count,
-      message: `Marked ${result.count} notification(s) as read.`,
+      count,
+      message: `Marked ${count} notification(s) as read.`,
     });
   } catch (error) {
     console.error("[POST /api/admin/notifications/read-all] Error:", error);

@@ -23,6 +23,7 @@ import {
   Clock,
   RotateCcw,
 } from "lucide-react";
+import { AdminRole } from "@prisma/client";
 
 export interface NotificationItem {
   id: string;
@@ -52,6 +53,40 @@ export interface NotificationMetrics {
   unread: number;
   warningsAndErrors: number;
   global: number;
+}
+
+/**
+ * Resolves the default category when switching destination mode,
+ * preserving custom input if the administrator deliberately edited the field.
+ */
+export function resolveCategoryDefault(
+  mode: "GLOBAL" | "TARGETED",
+  currentType: string,
+  isManuallyEdited: boolean
+): string {
+  if (isManuallyEdited) {
+    return currentType;
+  }
+  return mode === "TARGETED" ? "DIRECT" : "BROADCAST";
+}
+
+/**
+ * Resolves whether an administrator is authorized to delete a notification.
+ * - Targeted alert: Authorized if addressed to current admin.
+ * - Global broadcast: Strictly requires CCF_ADMIN role.
+ */
+export function isAuthorizedToDeleteNotification(
+  targetAdminId: string | null,
+  currentAdminId: string,
+  currentAdminRole?: AdminRole | string
+): boolean {
+  if (targetAdminId !== null) {
+    return targetAdminId === currentAdminId;
+  }
+  return (
+    currentAdminRole === AdminRole.CCF_ADMIN ||
+    currentAdminRole === "CCF_ADMIN"
+  );
 }
 
 /**
@@ -93,6 +128,7 @@ interface NotificationManagementConsoleProps {
   activeAdmins: AdminUserOption[];
   initialMetrics: NotificationMetrics;
   currentAdminId: string;
+  currentAdminRole?: AdminRole | string;
 }
 
 export function NotificationManagementConsole({
@@ -100,6 +136,7 @@ export function NotificationManagementConsole({
   activeAdmins,
   initialMetrics,
   currentAdminId,
+  currentAdminRole,
 }: NotificationManagementConsoleProps) {
   const [notifications, setNotifications] =
     useState<NotificationItem[]>(initialNotifications);
@@ -122,6 +159,7 @@ export function NotificationManagementConsole({
   const [createTitle, setCreateTitle] = useState("");
   const [createBody, setCreateBody] = useState("");
   const [createType, setCreateType] = useState("BROADCAST");
+  const [isTypeManuallyEdited, setIsTypeManuallyEdited] = useState(false);
   const [createSeverity, setCreateSeverity] = useState<
     "INFO" | "SUCCESS" | "WARNING" | "ERROR"
   >("INFO");
@@ -131,6 +169,18 @@ export function NotificationManagementConsole({
   const [createTargetAdminId, setCreateTargetAdminId] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleCloseCreateModal = () => {
+    setCreateTitle("");
+    setCreateBody("");
+    setCreateType("BROADCAST");
+    setIsTypeManuallyEdited(false);
+    setCreateSeverity("INFO");
+    setCreateTargetMode("GLOBAL");
+    setCreateTargetAdminId("");
+    setCreateError(null);
+    setIsCreateOpen(false);
+  };
 
   // Toast feedback state
   const [toastMessage, setToastMessage] = useState<{
@@ -377,6 +427,7 @@ export function NotificationManagementConsole({
       setCreateTitle("");
       setCreateBody("");
       setCreateType("BROADCAST");
+      setIsTypeManuallyEdited(false);
       setCreateSeverity("INFO");
       setCreateTargetMode("GLOBAL");
       setCreateTargetAdminId("");
@@ -724,15 +775,21 @@ export function NotificationManagementConsole({
                       <span>{isUnread ? "Mark Read" : "Unread"}</span>
                     </Button>
 
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeletingNotification(item)}
-                      className="h-8 w-8 p-0 text-ccf-muted hover:text-red-400 hover:bg-red-950/30"
-                      title="Delete notification"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
+                    {isAuthorizedToDeleteNotification(
+                      item.targetAdminId,
+                      currentAdminId,
+                      currentAdminRole
+                    ) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingNotification(item)}
+                        className="h-8 w-8 p-0 text-ccf-muted hover:text-red-400 hover:bg-red-950/30"
+                        title="Delete notification"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -757,7 +814,7 @@ export function NotificationManagementConsole({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsCreateOpen(false)}
+                onClick={handleCloseCreateModal}
                 className="h-8 w-8 p-0 text-ccf-muted hover:text-ccf-offwhite"
               >
                 <X className="w-4 h-4" />
@@ -787,12 +844,19 @@ export function NotificationManagementConsole({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-ccf-muted">Type / Category *</Label>
+                  <Label className="text-xs text-ccf-muted">
+                    {createTargetMode === "GLOBAL"
+                      ? "Category / Type (e.g. BROADCAST, ANNOUNCEMENT) *"
+                      : "Category / Type (e.g. DIRECT, ALERT) *"}
+                  </Label>
                   <Input
                     type="text"
-                    placeholder="BROADCAST"
+                    placeholder={createTargetMode === "GLOBAL" ? "BROADCAST" : "DIRECT"}
                     value={createType}
-                    onChange={(e) => setCreateType(e.target.value)}
+                    onChange={(e) => {
+                      setCreateType(e.target.value);
+                      setIsTypeManuallyEdited(true);
+                    }}
                     maxLength={100}
                     className="bg-ccf-surface-sunken border-border/60 text-xs h-9 text-ccf-offwhite focus-visible:ring-ccf-gold font-mono uppercase"
                     required
@@ -823,7 +887,12 @@ export function NotificationManagementConsole({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setCreateTargetMode("GLOBAL")}
+                    onClick={() => {
+                      setCreateTargetMode("GLOBAL");
+                      setCreateType((prev) =>
+                        resolveCategoryDefault("GLOBAL", prev, isTypeManuallyEdited)
+                      );
+                    }}
                     className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors ${
                       createTargetMode === "GLOBAL"
                         ? "bg-ccf-gold/10 border-ccf-gold text-ccf-gold"
@@ -836,7 +905,12 @@ export function NotificationManagementConsole({
 
                   <button
                     type="button"
-                    onClick={() => setCreateTargetMode("TARGETED")}
+                    onClick={() => {
+                      setCreateTargetMode("TARGETED");
+                      setCreateType((prev) =>
+                        resolveCategoryDefault("TARGETED", prev, isTypeManuallyEdited)
+                      );
+                    }}
                     className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors ${
                       createTargetMode === "TARGETED"
                         ? "bg-ccf-gold/10 border-ccf-gold text-ccf-gold"
@@ -891,7 +965,7 @@ export function NotificationManagementConsole({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setIsCreateOpen(false)}
+                  onClick={handleCloseCreateModal}
                   disabled={isSubmitting}
                   className="text-xs border-border/60 text-ccf-muted hover:text-ccf-offwhite"
                 >
@@ -935,7 +1009,10 @@ export function NotificationManagementConsole({
                   <span className="font-semibold text-ccf-offwhite">
                     &ldquo;{deletingNotification.title}&rdquo;
                   </span>
-                  ? This alert will be removed from all recipient feeds.
+                  ?{" "}
+                  {deletingNotification.targetAdminId === null
+                    ? "This is a shared global broadcast. Deleting it will permanently remove it for all administrators."
+                    : "This alert will be removed from your notifications feed."}
                 </p>
               </div>
             </div>

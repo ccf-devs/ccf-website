@@ -18,8 +18,8 @@ vi.mock("@/lib/auth/session", () => ({
   getCurrentAdmin: vi.fn(),
 }));
 
-vi.mock("@/lib/db/client", () => ({
-  prisma: {
+vi.mock("@/lib/db/client", () => {
+  const mockPrisma: any = {
     notification: {
       findMany: vi.fn(),
       findUnique: vi.fn(),
@@ -29,6 +29,13 @@ vi.mock("@/lib/db/client", () => ({
       count: vi.fn(),
       updateMany: vi.fn(),
     },
+    notificationReceipt: {
+      upsert: vi.fn(),
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+    },
     adminUser: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -36,14 +43,32 @@ vi.mock("@/lib/db/client", () => ({
     auditLog: {
       create: vi.fn(),
     },
-  },
-}));
+    $transaction: vi.fn(),
+  };
+
+  mockPrisma.$transaction.mockImplementation(async (cb: any) => {
+    if (typeof cb === "function") {
+      return cb(mockPrisma);
+    }
+    return cb;
+  });
+
+  return { prisma: mockPrisma };
+});
 
 describe("Admin Notifications API Integration Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(prisma.auditLog.create).mockResolvedValue({ id: "audit-1" } as any);
     vi.mocked(prisma.notification.count).mockResolvedValue(0);
+    vi.mocked(prisma.notificationReceipt.upsert).mockResolvedValue({
+      id: "receipt-1",
+      notificationId: "notif-1",
+      adminId: "admin-1",
+      readAt: new Date("2026-09-08T12:00:00Z"),
+    } as any);
+    vi.mocked(prisma.notificationReceipt.createMany).mockResolvedValue({ count: 1 } as any);
+    vi.mocked(prisma.notificationReceipt.deleteMany).mockResolvedValue({ count: 1 } as any);
   });
 
   const currentAdmin = {
@@ -223,7 +248,9 @@ describe("Admin Notifications API Integration Tests", () => {
           where: expect.objectContaining({
             AND: expect.arrayContaining([
               { severity: NotificationSeverity.WARNING },
-              { readAt: null },
+              expect.objectContaining({
+                receipts: { none: { adminId: currentAdmin.id } },
+              }),
               { targetAdminId: null },
               expect.objectContaining({
                 OR: expect.any(Array),
@@ -529,6 +556,14 @@ describe("Admin Notifications API Integration Tests", () => {
         targetAdminId: currentAdmin.id,
         title: "Task Assigned",
         readAt: null, // Currently unread
+        receipts: [],
+      } as any);
+
+      vi.mocked(prisma.notificationReceipt.upsert).mockResolvedValue({
+        id: "receipt-1",
+        notificationId: notifId,
+        adminId: currentAdmin.id,
+        readAt: new Date(),
       } as any);
 
       vi.mocked(prisma.notification.update).mockResolvedValue({
@@ -545,10 +580,14 @@ describe("Admin Notifications API Integration Tests", () => {
       );
       expect(res.status).toBe(200);
 
-      expect(prisma.notification.update).toHaveBeenCalledWith(
+      expect(prisma.notificationReceipt.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: notifId },
-          data: { readAt: expect.any(Date) },
+          where: {
+            notificationId_adminId: {
+              notificationId: notifId,
+              adminId: currentAdmin.id,
+            },
+          },
         })
       );
 
@@ -567,12 +606,14 @@ describe("Admin Notifications API Integration Tests", () => {
         id: notifId,
         targetAdminId: null,
         title: "Global Alert",
-        readAt: new Date("2026-09-08T10:00:00Z"), // Currently read
-      } as any);
-
-      vi.mocked(prisma.notification.update).mockResolvedValue({
-        id: notifId,
         readAt: null,
+        receipts: [
+          {
+            id: "receipt-1",
+            adminId: currentAdmin.id,
+            readAt: new Date("2026-09-08T10:00:00Z"),
+          },
+        ],
       } as any);
 
       const res = await patchNotification(
@@ -584,12 +625,15 @@ describe("Admin Notifications API Integration Tests", () => {
       );
       expect(res.status).toBe(200);
 
-      expect(prisma.notification.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { id: notifId },
-          data: { readAt: null },
-        })
-      );
+      expect(prisma.notificationReceipt.deleteMany).toHaveBeenCalledWith({
+        where: {
+          notificationId: notifId,
+          adminId: currentAdmin.id,
+        },
+      });
+
+      // Global notification record itself must not be mutated
+      expect(prisma.notification.update).not.toHaveBeenCalled();
 
       expect(prisma.auditLog.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -601,13 +645,61 @@ describe("Admin Notifications API Integration Tests", () => {
       );
     });
 
+    it("preserves independent read states for two administrators reading the same global notification", async () => {
+      const otherAdminReceipt = {
+        id: "receipt-other",
+        adminId: otherAdminId,
+        readAt: new Date("2026-09-08T10:00:00Z"),
+      };
+
+      // Notification is already read by otherAdminId, but currentAdmin has no receipt
+      vi.mocked(prisma.notification.findUnique).mockResolvedValue({
+        id: notifId,
+        targetAdminId: null,
+        title: "Global Alert",
+        readAt: null,
+        receipts: [], // Current admin has not read it
+      } as any);
+
+      const res = await patchNotification(
+        new NextRequest(`http://localhost/api/admin/notifications/${notifId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ read: true }),
+        }),
+        { params: Promise.resolve({ id: notifId }) }
+      );
+      expect(res.status).toBe(200);
+
+      // Receipt is created specifically for currentAdmin
+      expect(prisma.notificationReceipt.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            notificationId_adminId: {
+              notificationId: notifId,
+              adminId: currentAdmin.id,
+            },
+          },
+        })
+      );
+
+      // Global record is not mutated
+      expect(prisma.notification.update).not.toHaveBeenCalled();
+    });
+
     it("handles idempotent read-state update safely without duplicate writes (200)", async () => {
       const alreadyReadDate = new Date("2026-09-08T10:00:00Z");
       vi.mocked(prisma.notification.findUnique).mockResolvedValue({
         id: notifId,
         targetAdminId: null,
         title: "Already Read",
-        readAt: alreadyReadDate,
+        readAt: null,
+        receipts: [
+          {
+            id: "receipt-1",
+            adminId: currentAdmin.id,
+            readAt: alreadyReadDate,
+          },
+        ],
       } as any);
 
       const res = await patchNotification(
@@ -618,6 +710,7 @@ describe("Admin Notifications API Integration Tests", () => {
         { params: Promise.resolve({ id: notifId }) }
       );
       expect(res.status).toBe(200);
+      expect(prisma.notificationReceipt.upsert).not.toHaveBeenCalled();
       expect(prisma.notification.update).not.toHaveBeenCalled();
       expect(prisma.auditLog.create).not.toHaveBeenCalled();
     });
@@ -657,7 +750,27 @@ describe("Admin Notifications API Integration Tests", () => {
       expect(prisma.notification.delete).not.toHaveBeenCalled();
     });
 
-    it("deletes visible notification and logs NOTIFICATION_DELETED (200)", async () => {
+    it("rejects deletion of global notification by non-CCF admin (IT_ADMIN) with 403", async () => {
+      vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(itAdmin);
+      vi.mocked(prisma.notification.findUnique).mockResolvedValue({
+        id: notifId,
+        title: "Global Alert",
+        type: "BROADCAST",
+        targetAdminId: null,
+      } as any);
+
+      const res = await deleteNotification(
+        new NextRequest(`http://localhost/api/admin/notifications/${notifId}`, {
+          method: "DELETE",
+        }),
+        { params: Promise.resolve({ id: notifId }) }
+      );
+      expect(res.status).toBe(403);
+      expect(prisma.notification.delete).not.toHaveBeenCalled();
+    });
+
+    it("deletes visible global notification by CCF_ADMIN and logs NOTIFICATION_DELETED (200)", async () => {
+      vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(currentAdmin);
       vi.mocked(prisma.notification.findUnique).mockResolvedValue({
         id: notifId,
         title: "Obsolete Alert",
@@ -685,6 +798,27 @@ describe("Admin Notifications API Integration Tests", () => {
         })
       );
     });
+
+    it("allows IT_ADMIN to delete their own targeted notification (200)", async () => {
+      vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(itAdmin);
+      vi.mocked(prisma.notification.findUnique).mockResolvedValue({
+        id: notifId,
+        title: "Personal Alert for IT",
+        type: "DIRECT",
+        targetAdminId: itAdmin.id,
+      } as any);
+
+      vi.mocked(prisma.notification.delete).mockResolvedValue({ id: notifId } as any);
+
+      const res = await deleteNotification(
+        new NextRequest(`http://localhost/api/admin/notifications/${notifId}`, {
+          method: "DELETE",
+        }),
+        { params: Promise.resolve({ id: notifId }) }
+      );
+      expect(res.status).toBe(200);
+      expect(prisma.notification.delete).toHaveBeenCalledWith({ where: { id: notifId } });
+    });
   });
 
   /* -------------------------------------------------------------------------- */
@@ -695,8 +829,13 @@ describe("Admin Notifications API Integration Tests", () => {
       vi.mocked(authSession.getCurrentAdmin).mockResolvedValue(currentAdmin);
     });
 
-    it("marks all visible unread notifications as read and writes audit log", async () => {
-      vi.mocked(prisma.notification.updateMany).mockResolvedValue({ count: 5 });
+    it("marks all visible unread notifications as read via per-admin receipts and writes audit log", async () => {
+      const mockUnread = [
+        { id: "notif-1", targetAdminId: null },
+        { id: "notif-2", targetAdminId: currentAdmin.id },
+      ];
+      vi.mocked(prisma.notification.findMany).mockResolvedValue(mockUnread as any);
+      vi.mocked(prisma.notificationReceipt.createMany).mockResolvedValue({ count: 2 } as any);
 
       const res = await markAllRead(
         new NextRequest("http://localhost/api/admin/notifications/read-all", {
@@ -705,19 +844,21 @@ describe("Admin Notifications API Integration Tests", () => {
       );
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.count).toBe(5);
+      expect(data.count).toBe(2);
 
-      expect(prisma.notification.updateMany).toHaveBeenCalledWith(
+      expect(prisma.notificationReceipt.createMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({
-            AND: expect.arrayContaining([
-              {
-                OR: [{ targetAdminId: null }, { targetAdminId: currentAdmin.id }],
-              },
-              { readAt: null },
-            ]),
-          }),
-          data: { readAt: expect.any(Date) },
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              notificationId: "notif-1",
+              adminId: currentAdmin.id,
+            }),
+            expect.objectContaining({
+              notificationId: "notif-2",
+              adminId: currentAdmin.id,
+            }),
+          ]),
+          skipDuplicates: true,
         })
       );
 
@@ -725,14 +866,14 @@ describe("Admin Notifications API Integration Tests", () => {
         expect.objectContaining({
           data: expect.objectContaining({
             action: "NOTIFICATION_MARK_ALL_READ",
-            metadata: { count: 5 },
+            metadata: { count: 2 },
           }),
         })
       );
     });
 
     it("safely handles 0 unread notifications without throwing", async () => {
-      vi.mocked(prisma.notification.updateMany).mockResolvedValue({ count: 0 });
+      vi.mocked(prisma.notification.findMany).mockResolvedValue([]);
 
       const res = await markAllRead(
         new NextRequest("http://localhost/api/admin/notifications/read-all", {
@@ -742,6 +883,7 @@ describe("Admin Notifications API Integration Tests", () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.count).toBe(0);
+      expect(prisma.notificationReceipt.createMany).not.toHaveBeenCalled();
       expect(prisma.auditLog.create).not.toHaveBeenCalled();
     });
   });
