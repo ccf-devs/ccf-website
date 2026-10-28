@@ -12,6 +12,7 @@ import {
   resolveCreatedNotificationList,
   resolveCategoryDefault,
   isAuthorizedToDeleteNotification,
+  SUPPORTED_NOTIFICATION_TYPES,
 } from "@/components/admin/notifications";
 import * as authSession from "@/lib/auth/session";
 import { prisma } from "@/lib/db/client";
@@ -597,6 +598,39 @@ describe("Admin Notifications UI Unit Tests", () => {
 
       expect(html).toContain("Direct Alert to IT");
       expect(html).toContain('title="Delete notification"');
+    });
+  });
+
+  /* -------------------------------------------------------------------------- */
+  /* 6. Refined Notification Creation Form & Supported Types                    */
+  /* -------------------------------------------------------------------------- */
+  describe("6. Refined Notification Creation Form & Supported Types", () => {
+    it("exports all 4 supported notification types with descriptive labels", () => {
+      const typeValues = SUPPORTED_NOTIFICATION_TYPES.map((t) => t.value);
+      expect(typeValues).toEqual([
+        "ANNOUNCEMENT",
+        "ALERT",
+        "SYSTEM_UPDATE",
+        "ACTION_REQUIRED",
+      ]);
+
+      const announcement = SUPPORTED_NOTIFICATION_TYPES.find(
+        (t) => t.value === "ANNOUNCEMENT"
+      );
+      expect(announcement?.label).toContain("Announcement");
+
+      const alert = SUPPORTED_NOTIFICATION_TYPES.find((t) => t.value === "ALERT");
+      expect(alert?.label).toContain("Alert");
+
+      const systemUpdate = SUPPORTED_NOTIFICATION_TYPES.find(
+        (t) => t.value === "SYSTEM_UPDATE"
+      );
+      expect(systemUpdate?.label).toContain("System Update");
+
+      const actionRequired = SUPPORTED_NOTIFICATION_TYPES.find(
+        (t) => t.value === "ACTION_REQUIRED"
+      );
+      expect(actionRequired?.label).toContain("Action Required");
     });
   });
 });

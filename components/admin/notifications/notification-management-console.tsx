@@ -55,6 +55,16 @@ export interface NotificationMetrics {
   global: number;
 }
 
+export const SUPPORTED_NOTIFICATION_TYPES = [
+  { value: "ANNOUNCEMENT", label: "Announcement — General Information" },
+  { value: "ALERT", label: "Alert — Operational Notice" },
+  { value: "SYSTEM_UPDATE", label: "System Update — Platform & Maintenance" },
+  { value: "ACTION_REQUIRED", label: "Action Required — Task or Review Needed" },
+] as const;
+
+export type SupportedNotificationType =
+  (typeof SUPPORTED_NOTIFICATION_TYPES)[number]["value"];
+
 /**
  * Resolves the default category when switching destination mode,
  * preserving custom input if the administrator deliberately edited the field.
@@ -158,7 +168,7 @@ export function NotificationManagementConsole({
   // Create form state
   const [createTitle, setCreateTitle] = useState("");
   const [createBody, setCreateBody] = useState("");
-  const [createType, setCreateType] = useState("BROADCAST");
+  const [createType, setCreateType] = useState<string>("ANNOUNCEMENT");
   const [isTypeManuallyEdited, setIsTypeManuallyEdited] = useState(false);
   const [createSeverity, setCreateSeverity] = useState<
     "INFO" | "SUCCESS" | "WARNING" | "ERROR"
@@ -173,7 +183,7 @@ export function NotificationManagementConsole({
   const handleCloseCreateModal = () => {
     setCreateTitle("");
     setCreateBody("");
-    setCreateType("BROADCAST");
+    setCreateType("ANNOUNCEMENT");
     setIsTypeManuallyEdited(false);
     setCreateSeverity("INFO");
     setCreateTargetMode("GLOBAL");
@@ -426,7 +436,7 @@ export function NotificationManagementConsole({
       // Reset form
       setCreateTitle("");
       setCreateBody("");
-      setCreateType("BROADCAST");
+      setCreateType("ANNOUNCEMENT");
       setIsTypeManuallyEdited(false);
       setCreateSeverity("INFO");
       setCreateTargetMode("GLOBAL");
@@ -830,49 +840,64 @@ export function NotificationManagementConsole({
 
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs text-ccf-muted">Notification Title *</Label>
+                <Label htmlFor="notification-title" className="text-xs text-ccf-muted">
+                  Notification Title <span className="text-red-400">*</span>
+                </Label>
                 <Input
+                  id="notification-title"
                   type="text"
                   placeholder="e.g. Magnora'26 Reached 90% Capacity"
                   value={createTitle}
                   onChange={(e) => setCreateTitle(e.target.value)}
                   maxLength={250}
-                  className="bg-ccf-surface-sunken border-border/60 text-xs h-9 text-ccf-offwhite focus-visible:ring-ccf-gold"
+                  disabled={isSubmitting}
+                  className="bg-ccf-surface-sunken border-border/60 text-xs h-9 text-ccf-offwhite focus-visible:ring-ccf-gold disabled:opacity-50"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-ccf-muted">
-                    {createTargetMode === "GLOBAL"
-                      ? "Category / Type (e.g. BROADCAST, ANNOUNCEMENT) *"
-                      : "Category / Type (e.g. DIRECT, ALERT) *"}
+                  <Label htmlFor="notification-type" className="text-xs text-ccf-muted">
+                    Notification Type / Category <span className="text-red-400">*</span>
                   </Label>
-                  <Input
-                    type="text"
-                    placeholder={createTargetMode === "GLOBAL" ? "BROADCAST" : "DIRECT"}
+                  <select
+                    id="notification-type"
                     value={createType}
                     onChange={(e) => {
                       setCreateType(e.target.value);
                       setIsTypeManuallyEdited(true);
                     }}
-                    maxLength={100}
-                    className="bg-ccf-surface-sunken border-border/60 text-xs h-9 text-ccf-offwhite focus-visible:ring-ccf-gold font-mono uppercase"
+                    disabled={isSubmitting}
+                    className="w-full bg-ccf-surface-sunken border border-border/60 text-xs text-ccf-offwhite rounded-md px-3 h-9 focus:outline-none focus:ring-1 focus:ring-ccf-gold disabled:opacity-50"
                     required
-                  />
+                  >
+                    {SUPPORTED_NOTIFICATION_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                    {!SUPPORTED_NOTIFICATION_TYPES.some((t) => t.value === createType) && (
+                      <option value={createType}>{createType}</option>
+                    )}
+                  </select>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-ccf-muted">Severity *</Label>
+                  <Label htmlFor="notification-severity" className="text-xs text-ccf-muted">
+                    Severity <span className="text-red-400">*</span>
+                  </Label>
                   <select
+                    id="notification-severity"
                     value={createSeverity}
                     onChange={(e) =>
                       setCreateSeverity(
                         e.target.value as "INFO" | "SUCCESS" | "WARNING" | "ERROR"
                       )
                     }
-                    className="w-full bg-ccf-surface-sunken border border-border/60 text-xs text-ccf-offwhite rounded-md px-3 h-9 focus:outline-none focus:ring-1 focus:ring-ccf-gold"
+                    disabled={isSubmitting}
+                    className="w-full bg-ccf-surface-sunken border border-border/60 text-xs text-ccf-offwhite rounded-md px-3 h-9 focus:outline-none focus:ring-1 focus:ring-ccf-gold disabled:opacity-50"
+                    required
                   >
                     <option value="INFO">Info</option>
                     <option value="SUCCESS">Success</option>
@@ -883,35 +908,33 @@ export function NotificationManagementConsole({
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-ccf-muted">Destination *</Label>
+                <Label className="text-xs text-ccf-muted">
+                  Recipients <span className="text-red-400">*</span>
+                </Label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={() => {
                       setCreateTargetMode("GLOBAL");
-                      setCreateType((prev) =>
-                        resolveCategoryDefault("GLOBAL", prev, isTypeManuallyEdited)
-                      );
                     }}
-                    className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors ${
+                    className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
                       createTargetMode === "GLOBAL"
                         ? "bg-ccf-gold/10 border-ccf-gold text-ccf-gold"
                         : "bg-ccf-surface-sunken border-border/60 text-ccf-muted hover:text-ccf-offwhite"
                     }`}
                   >
                     <Globe className="w-3.5 h-3.5" />
-                    <span>Global (All Admins)</span>
+                    <span>All Admins (Global)</span>
                   </button>
 
                   <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={() => {
                       setCreateTargetMode("TARGETED");
-                      setCreateType((prev) =>
-                        resolveCategoryDefault("TARGETED", prev, isTypeManuallyEdited)
-                      );
                     }}
-                    className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors ${
+                    className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-50 ${
                       createTargetMode === "TARGETED"
                         ? "bg-ccf-gold/10 border-ccf-gold text-ccf-gold"
                         : "bg-ccf-surface-sunken border-border/60 text-ccf-muted hover:text-ccf-offwhite"
@@ -925,13 +948,15 @@ export function NotificationManagementConsole({
 
               {createTargetMode === "TARGETED" && (
                 <div className="space-y-1.5 animate-in fade-in duration-150">
-                  <Label className="text-xs text-ccf-muted">
-                    Target Administrator *
+                  <Label htmlFor="notification-target-admin" className="text-xs text-ccf-muted">
+                    Target Administrator <span className="text-red-400">*</span>
                   </Label>
                   <select
+                    id="notification-target-admin"
                     value={createTargetAdminId}
                     onChange={(e) => setCreateTargetAdminId(e.target.value)}
-                    className="w-full bg-ccf-surface-sunken border border-border/60 text-xs text-ccf-offwhite rounded-md px-3 h-9 focus:outline-none focus:ring-1 focus:ring-ccf-gold"
+                    disabled={isSubmitting}
+                    className="w-full bg-ccf-surface-sunken border border-border/60 text-xs text-ccf-offwhite rounded-md px-3 h-9 focus:outline-none focus:ring-1 focus:ring-ccf-gold disabled:opacity-50"
                     required
                   >
                     <option value="">Select an administrator...</option>
@@ -945,19 +970,25 @@ export function NotificationManagementConsole({
               )}
 
               <div className="space-y-1.5">
-                <Label className="text-xs text-ccf-muted">Message Content *</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="notification-body" className="text-xs text-ccf-muted">
+                    Message Content <span className="text-red-400">*</span>
+                  </Label>
+                  <span className="text-[10px] text-ccf-muted">
+                    {createBody.length} / 2000
+                  </span>
+                </div>
                 <textarea
+                  id="notification-body"
                   placeholder="Provide operational details, actions required, or relevant context..."
                   value={createBody}
                   onChange={(e) => setCreateBody(e.target.value)}
                   rows={4}
                   maxLength={2000}
-                  className="w-full rounded-md border border-border/60 bg-ccf-surface-sunken p-3 text-xs text-ccf-offwhite placeholder:text-ccf-muted/60 focus:outline-none focus:ring-1 focus:ring-ccf-gold"
+                  disabled={isSubmitting}
+                  className="w-full rounded-md border border-border/60 bg-ccf-surface-sunken p-3 text-xs text-ccf-offwhite placeholder:text-ccf-muted/60 focus:outline-none focus:ring-1 focus:ring-ccf-gold disabled:opacity-50"
                   required
                 />
-                <div className="text-right text-[10px] text-ccf-muted">
-                  {createBody.length} / 2000
-                </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
@@ -974,8 +1005,13 @@ export function NotificationManagementConsole({
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={isSubmitting}
-                  className="bg-ccf-gold text-ccf-navy hover:bg-ccf-gold-light font-semibold text-xs h-9 px-4"
+                  disabled={
+                    isSubmitting ||
+                    !createTitle.trim() ||
+                    !createBody.trim() ||
+                    (createTargetMode === "TARGETED" && !createTargetAdminId)
+                  }
+                  className="bg-ccf-gold text-ccf-navy hover:bg-ccf-gold-light font-semibold text-xs h-9 px-4 disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>
@@ -983,7 +1019,7 @@ export function NotificationManagementConsole({
                       Publishing...
                     </>
                   ) : (
-                    "Publish Alert"
+                    "Publish Notification"
                   )}
                 </Button>
               </div>
