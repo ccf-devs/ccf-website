@@ -1,6 +1,5 @@
 import { Metadata } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/config";
+import { getCurrentAdmin } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { AdminShell, AdminPageHeader } from "@/components/admin";
 import { EventForm } from "@/components/admin/events";
@@ -11,14 +10,14 @@ export const metadata: Metadata = {
 };
 
 export default async function CreateEventPage() {
-  const session = await getServerSession(authOptions);
+  const admin = await getCurrentAdmin();
 
-  if (!session?.user || session.user.active === false) {
-    redirect("/admin/auth/login");
+  if (!admin) {
+    redirect("/admin/auth/login?callbackUrl=/admin/events/new");
   }
 
   return (
-    <AdminShell user={session.user}>
+    <AdminShell user={admin}>
       <AdminPageHeader
         eyebrow="Events"
         title="Create Event"

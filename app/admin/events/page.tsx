@@ -1,6 +1,5 @@
 import { Metadata } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/config";
+import { getCurrentAdmin } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -18,10 +17,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminEventsPage() {
-  const session = await getServerSession(authOptions);
+  const admin = await getCurrentAdmin();
 
-  if (!session?.user || session.user.active === false) {
-    redirect("/admin/auth/login");
+  if (!admin) {
+    redirect("/admin/auth/login?callbackUrl=/admin/events");
   }
 
   let events: EventListItem[] = [];
@@ -59,7 +58,7 @@ export default async function AdminEventsPage() {
   }
 
   return (
-    <AdminShell user={session.user}>
+    <AdminShell user={admin}>
       <AdminPageHeader
         eyebrow="Content"
         title="Events"

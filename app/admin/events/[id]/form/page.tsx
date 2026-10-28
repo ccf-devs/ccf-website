@@ -1,6 +1,5 @@
 import { Metadata } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/config";
+import { getCurrentAdmin } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { AdminShell, DashboardErrorState } from "@/components/admin";
 import { FormBuilder } from "@/components/admin/forms";
@@ -30,16 +29,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function AdminEventFormPage({ params }: PageProps) {
-  const session = await getServerSession(authOptions);
+  const admin = await getCurrentAdmin();
 
-  if (!session?.user || session.user.active === false) {
-    redirect("/admin/auth/login");
-  }
-
-  // Verify CCF_ADMIN or IT_ADMIN authorization
-  const role = session.user.role;
-  if (role !== "CCF_ADMIN" && role !== "IT_ADMIN") {
-    redirect("/admin");
+  if (!admin || (admin.role !== "CCF_ADMIN" && admin.role !== "IT_ADMIN")) {
+    redirect("/admin/auth/login?callbackUrl=/admin/events");
   }
 
   const { id } = await params;
@@ -88,7 +81,7 @@ export default async function AdminEventFormPage({ params }: PageProps) {
     })) || [];
 
   return (
-    <AdminShell user={session.user}>
+    <AdminShell user={admin}>
       <div className="space-y-6">
         {errorMessage ? (
           <DashboardErrorState
