@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getCurrentAdmin } from "@/lib/auth/session";
+import { getAuthenticatedOrEnrollmentAdmin } from "@/lib/auth/session";
 import {
   generateTotpSecret,
   encryptTotpSecret,
@@ -10,9 +10,24 @@ import { prisma } from "@/lib/db/client";
 
 export async function POST() {
   try {
-    const admin = await getCurrentAdmin();
+    const admin = await getAuthenticatedOrEnrollmentAdmin();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // SEC-002: Protect existing verified TOTP secrets.
+    // If an administrator is already enrolled, reject setup requests to prevent
+    // overwriting or invalidating active credentials without a formal rotation flow.
+    const existing = await prisma.adminTotpSecret.findUnique({
+      where: { adminId: admin.id },
+      select: { verified: true },
+    });
+
+    if (existing?.verified) {
+      return NextResponse.json(
+        { error: "TOTP authenticator is already configured and verified for this administrator." },
+        { status: 409 }
+      );
     }
 
     const secret = generateTotpSecret();

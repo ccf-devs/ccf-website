@@ -24,6 +24,12 @@ export async function proxy(req: NextRequest) {
       loginUrl.searchParams.set("error", "inactive");
       return NextResponse.redirect(loginUrl);
     }
+
+    // Redirect restricted enrollment sessions away from full admin routes to bootstrap setup
+    if (token.isRestrictedEnrollment === true) {
+      const enrollUrl = new URL("/admin/auth/bootstrap", req.url);
+      return NextResponse.redirect(enrollUrl);
+    }
   }
 
   return NextResponse.next({

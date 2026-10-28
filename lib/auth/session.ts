@@ -27,6 +27,11 @@ export const getCurrentAdmin = cache(async (): Promise<AuthenticatedAdmin | null
     return null;
   }
 
+  // A restricted bootstrap enrollment session is strictly prohibited from general admin operations
+  if (session.user.isRestrictedEnrollment) {
+    return null;
+  }
+
   // Authoritative server-side re-check from database
   const admin = await prisma.adminUser.findUnique({
     where: { id: session.user.id },
@@ -50,6 +55,56 @@ export const getCurrentAdmin = cache(async (): Promise<AuthenticatedAdmin | null
     role: admin.role,
   };
 });
+
+/**
+ * Retrieves an administrator currently in a restricted initial bootstrap enrollment session.
+ * Re-validates against database to ensure account is active.
+ * Only permitted to call enrollment endpoints (TOTP setup, verify, recovery code generation).
+ */
+export const getEnrollmentAdmin = cache(async (): Promise<AuthenticatedAdmin | null> => {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id || !session.user.email) {
+    return null;
+  }
+
+  if (!session.user.isRestrictedEnrollment) {
+    return null;
+  }
+
+  const admin = await prisma.adminUser.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      active: true,
+    },
+  });
+
+  if (!admin || !admin.active) {
+    return null;
+  }
+
+  return {
+    id: admin.id,
+    email: admin.email,
+    name: admin.name,
+    role: admin.role,
+  };
+});
+
+/**
+ * Retrieves either an active standard administrator or an administrator
+ * in a restricted bootstrap enrollment session.
+ * Used exclusively by self-enrollment endpoints (TOTP setup, verify, recovery code generation).
+ */
+export async function getAuthenticatedOrEnrollmentAdmin(): Promise<AuthenticatedAdmin | null> {
+  const standardAdmin = await getCurrentAdmin();
+  if (standardAdmin) return standardAdmin;
+  return getEnrollmentAdmin();
+}
 
 /**
  * Requires an active authenticated administrator.

@@ -5,6 +5,7 @@ import { createCcfAdminAdapter, normalizeAdminEmail } from "@/lib/auth/adapter";
 import { sendMagicLinkEmail } from "@/lib/auth/email";
 import { decryptTotpSecret, verifyTotpToken } from "@/lib/auth/totp";
 import { verifyAndConsumeRecoveryCode } from "@/lib/auth/recovery";
+import { verifyAndRedeemBootstrapOtp } from "@/lib/auth/bootstrap";
 import { prisma } from "@/lib/db/client";
 import { AdminRole } from "@prisma/client";
 
@@ -32,6 +33,15 @@ export const authOptions: NextAuthOptions = {
       from: process.env.EMAIL_FROM || "CCF Auth <auth@crescentcluboffinance.com>",
       server: "",
       sendVerificationRequest: async ({ identifier, url, expires }) => {
+        const normalizedEmail = normalizeAdminEmail(identifier);
+        const admin = await prisma.adminUser.findUnique({
+          where: { email: normalizedEmail },
+          select: { role: true, active: true },
+        });
+        // SEC-004: Magic link email delivery is strictly reserved for CCF_ADMIN
+        if (!admin || !admin.active || admin.role !== AdminRole.CCF_ADMIN) {
+          return;
+        }
         await sendMagicLinkEmail({ identifier, url, expires });
       },
       options: {},
@@ -105,9 +115,16 @@ export const authOptions: NextAuthOptions = {
 
         const admin = await prisma.adminUser.findUnique({
           where: { email: normalizedEmail },
+          include: { totpSecret: true },
         });
 
         if (!admin || !admin.active) {
+          return null;
+        }
+
+        // SEC-001: Recovery code authentication is only permitted for administrators
+        // who have an enrolled and verified TOTP secret
+        if (!admin.totpSecret || !admin.totpSecret.verified) {
           return null;
         }
 
@@ -126,14 +143,53 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
+
+    // 4. Initial Bootstrap Authentication: Single-Use Operator OTP
+    CredentialsProvider({
+      id: "bootstrap-otp",
+      name: "Initial Bootstrap OTP",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        otp: { label: "Bootstrap OTP", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.otp) {
+          return null;
+        }
+
+        const result = await verifyAndRedeemBootstrapOtp(
+          credentials.email,
+          credentials.otp
+        );
+
+        if (!result.success || !result.admin) {
+          return null;
+        }
+
+        return {
+          id: result.admin.id,
+          email: result.admin.email,
+          name: result.admin.name,
+          role: result.admin.role,
+          active: result.admin.active,
+          isRestrictedEnrollment: true,
+        };
+      },
+    }),
   ],
 
   callbacks: {
-    async signIn({ user }) {
+    async signIn({ user, account }) {
       // Reject any user without an explicit active status
       if (!user) return false;
-      const customUser = user as { active?: boolean };
+      const customUser = user as { active?: boolean; role?: AdminRole };
       if (customUser.active === false) {
+        return false;
+      }
+      // SEC-004: Strict role-specific authentication policy:
+      // Magic link email sign-in is strictly reserved for CCF_ADMIN.
+      // IT_ADMIN accounts must authenticate via TOTP authenticator (or recovery codes).
+      if (account?.provider === "email" && customUser.role !== AdminRole.CCF_ADMIN) {
         return false;
       }
       return true;
@@ -141,10 +197,15 @@ export const authOptions: NextAuthOptions = {
 
     async jwt({ token, user }) {
       if (user) {
-        const customUser = user as { role?: AdminRole; active?: boolean };
+        const customUser = user as {
+          role?: AdminRole;
+          active?: boolean;
+          isRestrictedEnrollment?: boolean;
+        };
         token.id = user.id;
         token.role = customUser.role as AdminRole;
         token.active = customUser.active ?? true;
+        token.isRestrictedEnrollment = customUser.isRestrictedEnrollment ?? false;
       }
       return token;
     },
@@ -154,6 +215,8 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as AdminRole;
         session.user.active = (token.active as boolean) ?? true;
+        session.user.isRestrictedEnrollment =
+          (token.isRestrictedEnrollment as boolean) ?? false;
       }
       return session;
     },

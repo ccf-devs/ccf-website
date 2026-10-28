@@ -162,6 +162,7 @@ model AdminUser {
   // Auth infrastructure back-relations
   totpSecret    AdminTotpSecret?
   recoveryCodes AdminRecoveryCode[]
+  bootstrapOtps AdminBootstrapOtp[]
 
   @@map("admin_users")
 }
@@ -661,4 +662,26 @@ model AdminRecoveryCode {
 
   @@index([adminId], map: "idx_recovery_codes_admin_id")
   @@map("admin_recovery_codes")
+}
+
+// --- 22. admin_bootstrap_otps -------------------------------------------------
+// Stores bcrypt-hashed one-time initial bootstrap OTPs for administrator onboarding.
+// Bound to a single admin and single purpose. Atomically consumed/invalidated upon redemption.
+
+model AdminBootstrapOtp {
+  id          String    @id @default(uuid()) @db.Uuid
+  adminId     String    @map("admin_id") @db.Uuid
+  otpHash     String    @map("otp_hash") @db.Text
+  purpose     String    @default("INITIAL_BOOTSTRAP") @map("purpose") @db.VarChar(50)
+  attempts    Int       @default(0) @map("attempts")
+  maxAttempts Int       @default(5) @map("max_attempts")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz()
+  redeemedAt  DateTime? @map("redeemed_at") @db.Timestamptz()
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz()
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([adminId, purpose], map: "idx_admin_bootstrap_otp_admin")
+  @@map("admin_bootstrap_otps")
 }

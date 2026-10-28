@@ -47,11 +47,8 @@ function TotpForm() {
     <div className="w-full max-w-md space-y-6 rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
       <div className="text-center">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          TOTP Authenticator
+          Authenticator App
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Enter your administrator email and the 6-digit code from your authenticator app.
-        </p>
       </div>
 
       {error && (
@@ -66,7 +63,7 @@ function TotpForm() {
             htmlFor="email"
             className="block text-sm font-medium text-slate-700"
           >
-            Administrator Email
+            Email
           </label>
           <input
             id="email"
@@ -85,7 +82,7 @@ function TotpForm() {
             htmlFor="code"
             className="block text-sm font-medium text-slate-700"
           >
-            6-Digit Authenticator Code
+            6-Digit Code
           </label>
           <input
             id="code"
@@ -98,6 +95,7 @@ function TotpForm() {
             onChange={(e) => setCode(e.target.value)}
             placeholder="123456"
             className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-center text-lg font-mono tracking-widest text-slate-900 shadow-sm focus:border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-800"
+            autoFocus
           />
         </div>
 
@@ -106,7 +104,7 @@ function TotpForm() {
           disabled={loading || code.length !== 6}
           className="w-full bg-slate-900 text-white hover:bg-slate-800"
         >
-          {loading ? "Verifying Code..." : "Verify Code & Sign In"}
+          {loading ? "Signing in..." : "Sign In"}
         </Button>
       </form>
 
@@ -114,17 +112,17 @@ function TotpForm() {
         <div>
           <Link
             href="/admin/auth/login"
-            className="font-medium text-slate-700 hover:text-slate-900 underline"
+            className="text-xs text-slate-600 hover:text-slate-900 underline"
           >
-            Sign in via Magic Link instead
+            Sign in with magic link
           </Link>
         </div>
         <div>
           <Link
             href="/admin/auth/recovery"
-            className="font-medium text-slate-500 hover:text-slate-700 underline text-xs"
+            className="text-xs text-slate-400 hover:text-slate-600 underline"
           >
-            Use Break-Glass Recovery Code
+            Use recovery code
           </Link>
         </div>
       </div>

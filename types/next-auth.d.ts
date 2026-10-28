@@ -7,6 +7,7 @@ declare module "next-auth" {
       id: string;
       role: AdminRole;
       active: boolean;
+      isRestrictedEnrollment?: boolean;
     } & DefaultSession["user"];
   }
 
@@ -14,6 +15,7 @@ declare module "next-auth" {
     id: string;
     role: AdminRole;
     active: boolean;
+    isRestrictedEnrollment?: boolean;
   }
 }
 
@@ -22,5 +24,6 @@ declare module "next-auth/jwt" {
     id: string;
     role: AdminRole;
     active: boolean;
+    isRestrictedEnrollment?: boolean;
   }
 }

@@ -47,15 +47,12 @@ function RecoveryForm() {
     <div className="w-full max-w-md space-y-6 rounded-lg border border-slate-200 bg-white p-8 shadow-sm">
       <div className="text-center">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Break-Glass Recovery
+          Recovery Code
         </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Enter your administrator email and one of your unused one-time recovery codes.
-        </p>
       </div>
 
-      <div className="rounded-md bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200">
-        <strong>Notice:</strong> Each recovery code can only be used once. Upon successful sign-in, the used code is permanently deleted.
+      <div className="rounded-md bg-amber-50 p-2.5 text-xs text-amber-800 border border-amber-200 text-center">
+        Each recovery code can only be used once.
       </div>
 
       {error && (
@@ -70,7 +67,7 @@ function RecoveryForm() {
             htmlFor="email"
             className="block text-sm font-medium text-slate-700"
           >
-            Administrator Email
+            Email
           </label>
           <input
             id="email"
@@ -89,7 +86,7 @@ function RecoveryForm() {
             htmlFor="code"
             className="block text-sm font-medium text-slate-700"
           >
-            One-Time Recovery Code
+            Recovery Code
           </label>
           <input
             id="code"
@@ -100,6 +97,7 @@ function RecoveryForm() {
             onChange={(e) => setCode(e.target.value)}
             placeholder="XXXXX-XXXXX"
             className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-center text-lg font-mono uppercase tracking-wider text-slate-900 shadow-sm focus:border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-800"
+            autoFocus
           />
         </div>
 
@@ -108,16 +106,16 @@ function RecoveryForm() {
           disabled={loading || !code.trim()}
           className="w-full bg-slate-900 text-white hover:bg-slate-800"
         >
-          {loading ? "Verifying Recovery Code..." : "Verify & Sign In"}
+          {loading ? "Signing in..." : "Sign In"}
         </Button>
       </form>
 
       <div className="text-center text-sm pt-2">
         <Link
           href="/admin/auth/login"
-          className="font-medium text-slate-700 hover:text-slate-900 underline"
+          className="text-xs text-slate-600 hover:text-slate-900 underline"
         >
-          Back to regular sign in
+          Back to sign in
         </Link>
       </div>
     </div>

@@ -17,6 +17,27 @@ export async function sendMagicLinkEmail({
   url,
   expires,
 }: SendVerificationEmailParams): Promise<void> {
+  // Safe Test Email Sink:
+  // In automated test environments, intercept verification links and write to a local sink file.
+  // Security: Strictly bypassed in production mode (NODE_ENV === 'production').
+  if (process.env.TEST_EMAIL_SINK_FILE && process.env.NODE_ENV !== "production") {
+    const fs = await import("fs");
+    const path = await import("path");
+    const dir = path.dirname(process.env.TEST_EMAIL_SINK_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const sinkData = {
+      identifier,
+      url,
+      expires: expires.toISOString(),
+      timestamp: new Date().toISOString(),
+    };
+    fs.writeFileSync(process.env.TEST_EMAIL_SINK_FILE, JSON.stringify(sinkData, null, 2), "utf8");
+    console.log(`[AUTH TEST SINK] Intercepted verification link for test delivery`);
+    return;
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || "CCF Auth <auth@crescentcluboffinance.com>";
 

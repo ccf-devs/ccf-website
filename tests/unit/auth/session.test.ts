@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   getCurrentAdmin,
+  getEnrollmentAdmin,
+  getAuthenticatedOrEnrollmentAdmin,
   requireAdmin,
   requireRole,
   isItAdmin,
@@ -88,6 +90,165 @@ describe("Session and Role Authorization", () => {
       expect(admin).not.toBeNull();
       expect(admin?.role).toBe(AdminRole.IT_ADMIN);
       expect(admin?.email).toBe("it@crescent.education");
+    });
+
+    it("strictly rejects session if isRestrictedEnrollment is true", async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: {
+          id: "admin-uuid-bootstrap",
+          email: "it@crescent.education",
+          name: "IT Lead",
+          role: AdminRole.IT_ADMIN,
+          active: true,
+          isRestrictedEnrollment: true,
+        },
+        expires: "2099-01-01",
+      });
+
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
+        id: "admin-uuid-bootstrap",
+        email: "it@crescent.education",
+        name: "IT Lead",
+        role: AdminRole.IT_ADMIN,
+        active: true,
+      } as any);
+
+      const admin = await getCurrentAdmin();
+      expect(admin).toBeNull();
+    });
+  });
+
+  describe("getEnrollmentAdmin", () => {
+    it("returns null when no session exists", async () => {
+      vi.mocked(getServerSession).mockResolvedValue(null);
+      const admin = await getEnrollmentAdmin();
+      expect(admin).toBeNull();
+    });
+
+    it("returns null when session is NOT in restricted enrollment mode", async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: {
+          id: "admin-uuid-standard",
+          email: "standard@crescent.education",
+          name: "Standard Admin",
+          role: AdminRole.CCF_ADMIN,
+          active: true,
+          isRestrictedEnrollment: false,
+        },
+        expires: "2099-01-01",
+      });
+
+      const admin = await getEnrollmentAdmin();
+      expect(admin).toBeNull();
+    });
+
+    it("returns admin when session is restricted and admin is active in DB", async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: {
+          id: "admin-uuid-enroll",
+          email: "enroll@crescent.education",
+          name: "Enrolling Admin",
+          role: AdminRole.IT_ADMIN,
+          active: true,
+          isRestrictedEnrollment: true,
+        },
+        expires: "2099-01-01",
+      });
+
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
+        id: "admin-uuid-enroll",
+        email: "enroll@crescent.education",
+        name: "Enrolling Admin",
+        role: AdminRole.IT_ADMIN,
+        active: true,
+      } as any);
+
+      const admin = await getEnrollmentAdmin();
+      expect(admin).not.toBeNull();
+      expect(admin?.id).toBe("admin-uuid-enroll");
+    });
+
+    it("rejects enrollment admin if marked inactive in DB", async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: {
+          id: "admin-uuid-enroll-inactive",
+          email: "enroll@crescent.education",
+          name: "Enrolling Admin",
+          role: AdminRole.IT_ADMIN,
+          active: true,
+          isRestrictedEnrollment: true,
+        },
+        expires: "2099-01-01",
+      });
+
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
+        id: "admin-uuid-enroll-inactive",
+        email: "enroll@crescent.education",
+        name: "Enrolling Admin",
+        role: AdminRole.IT_ADMIN,
+        active: false,
+      } as any);
+
+      const admin = await getEnrollmentAdmin();
+      expect(admin).toBeNull();
+    });
+  });
+
+  describe("getAuthenticatedOrEnrollmentAdmin", () => {
+    it("returns admin for standard full administrator session", async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: {
+          id: "admin-full",
+          email: "full@crescent.education",
+          name: "Full Admin",
+          role: AdminRole.CCF_ADMIN,
+          active: true,
+          isRestrictedEnrollment: false,
+        },
+        expires: "2099-01-01",
+      });
+
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
+        id: "admin-full",
+        email: "full@crescent.education",
+        name: "Full Admin",
+        role: AdminRole.CCF_ADMIN,
+        active: true,
+      } as any);
+
+      const admin = await getAuthenticatedOrEnrollmentAdmin();
+      expect(admin?.id).toBe("admin-full");
+    });
+
+    it("returns admin for restricted enrollment session", async () => {
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: {
+          id: "admin-enroll-only",
+          email: "enroll@crescent.education",
+          name: "Enroll Admin",
+          role: AdminRole.IT_ADMIN,
+          active: true,
+          isRestrictedEnrollment: true,
+        },
+        expires: "2099-01-01",
+      });
+
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue({
+        id: "admin-enroll-only",
+        email: "enroll@crescent.education",
+        name: "Enroll Admin",
+        role: AdminRole.IT_ADMIN,
+        active: true,
+      } as any);
+
+      const admin = await getAuthenticatedOrEnrollmentAdmin();
+      expect(admin?.id).toBe("admin-enroll-only");
+    });
+
+    it("returns null when completely unauthenticated", async () => {
+      vi.mocked(getServerSession).mockResolvedValue(null);
+      const admin = await getAuthenticatedOrEnrollmentAdmin();
+      expect(admin).toBeNull();
     });
   });
 

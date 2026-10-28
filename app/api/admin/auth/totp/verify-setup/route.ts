@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentAdmin } from "@/lib/auth/session";
+import { getAuthenticatedOrEnrollmentAdmin } from "@/lib/auth/session";
 import { decryptTotpSecret, verifyTotpToken } from "@/lib/auth/totp";
 import { prisma } from "@/lib/db/client";
 
 export async function POST(request: NextRequest) {
   try {
-    const admin = await getCurrentAdmin();
+    const admin = await getAuthenticatedOrEnrollmentAdmin();
     if (!admin) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -23,6 +23,13 @@ export async function POST(request: NextRequest) {
 
     if (!totpRecord) {
       return NextResponse.json({ error: "No TOTP enrollment in progress" }, { status: 404 });
+    }
+
+    if (totpRecord.verified) {
+      return NextResponse.json(
+        { error: "TOTP authenticator is already verified." },
+        { status: 409 }
+      );
     }
 
     const plainSecret = decryptTotpSecret(totpRecord.secret);
